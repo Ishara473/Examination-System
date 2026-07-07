@@ -54,7 +54,14 @@ class AdminExamController extends Controller
         }
 
         $data = [];
-        if(empty($request->semester)) return;
+        if(empty($request->semester)){
+            return response()->json([
+                'draw' => (int) ($request->draw ?? 0),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+            ]);
+        }
         if(!isset($request->type) || $request->type == 'json'){
 
             $col = [2=>'RegistrationNo',3=>'Name',4=>'Batch',5=>'IDNo'];
