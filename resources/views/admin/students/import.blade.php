@@ -202,7 +202,11 @@ $(document).ready(function() {
                 }
             },
             error: function(jqXHR, textStatus, errorThrown){
-                //if fails     
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Upload Failed',
+                    text: jqXHR.responseText || 'An error occurred during upload',
+                });
             }
         });
     });
@@ -229,10 +233,12 @@ $(document).ready(function() {
                     });
                     location.reload(); 
                 }else{
-                    // $('#btnProcess').show();
                     $('#btnProcess').removeClass('disabled').removeProp('disabled');
-
-
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Processing Failed',
+                        text: 'No records were processed. Check that status is "Enrolled" and records do not already exist.',
+                    });
                 }
             }
         });
