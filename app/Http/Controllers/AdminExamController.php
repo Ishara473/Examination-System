@@ -232,7 +232,9 @@ class AdminExamController extends Controller
                             );
             if(!empty($search))$q->where('student_personal_details.registration_no','like',$search.'%')->orWhere('student_personal_details.id_no','like',$search.'%');
             $students = $q->get();
-            if(empty($students) || $students->isEmpty()) return ;
+            if(empty($students) || $students->isEmpty()) {
+                return redirect()->back()->with('error', 'No admission records found for the selected semester/search criteria.');
+            }
 
             foreach($students as $std){
                 $data[$std->id] = ['name'=>$std->name,'full_name'=>$std->full_name,'regno'=>$std->registration_no,'indexno'=>$std->index_no,'idno'=>$std->id_no,'program'=>$std->program,'subjects'=>[]];
@@ -302,7 +304,9 @@ class AdminExamController extends Controller
                             );
             if(!empty($search))$q->where('student_personal_details.registration_no','like',$search.'%')->orWhere('student_personal_details.id_no','like',$search.'%');
             $students = $q->get();
-            if(empty($students) || $students->isEmpty()) return ;
+            if(empty($students) || $students->isEmpty()) {
+                return redirect()->back()->with('error', 'No admission records found for the selected semester/search criteria.');
+            }
 
             foreach($students as $std){
                 $data[$std->id] = ['name'=>$std->name,'full_name'=>$std->full_name,'regno'=>$std->registration_no,'indexno'=>$std->index_no,'idno'=>$std->id_no,'program'=>$std->program,'subjects'=>[]];
