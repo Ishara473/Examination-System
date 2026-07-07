@@ -481,9 +481,9 @@ class AdminStudentController extends Controller{
                     DB::transaction( function() use( &$request, &$row, &$gender,&$titles, &$batch){
                         $batch = Batch::where('id','=',$row->batch)->first();
 
-                        
+                        if(empty($batch)) return;
 
-                        if($row->status != 'Enrolled') return;
+                        if(trim(strtolower($row->status)) !== 'enrolled') return;
                         // $record = [];
                         $regNo = $row->registration_no;
                         $student = Student::where('registration_no','=',$regNo)->first();
