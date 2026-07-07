@@ -348,7 +348,7 @@ class AdminExamController extends Controller
     }
 
     public function approve_by_subject(Request $request) {
-        if (!(Auth::user()->hasPermissionTo('examapp:approve') || Auth::user()->hasRole('Admin') )){ 
+        if (!(Auth::user()->hasPermissionTo('examapp:approve') || Auth::user()->hasPermissionTo('results:process') || Auth::user()->hasRole('Admin') )){ 
             abort(403, 'Unauthorized action.');
         }
 
@@ -442,7 +442,7 @@ class AdminExamController extends Controller
     }
 
     public function approve_application_subject(Request $request){
-        if (!(Auth::user()->hasPermissionTo('examapp:approve') || Auth::user()->hasRole('Admin') )){ 
+        if (!(Auth::user()->hasPermissionTo('examapp:approve') || Auth::user()->hasPermissionTo('results:process') || Auth::user()->hasRole('Admin') )){ 
             abort(403, 'Unauthorized action.');
         }
 
