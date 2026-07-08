@@ -17,7 +17,7 @@ class GPAImport implements ToCollection
         unset($collection[0]);
         try{
             foreach ($collection as $key=>$row){
-                $registration_no = strtoupper(trim($row[0]));
+                $registration_no = strtoupper(trim($row[0] ?? ''));
                 if(is_numeric($row[1]) && $registration_no != ''){
                     $data = TempGPAImport::create([
                         'registration_no' => $registration_no,
@@ -26,7 +26,7 @@ class GPAImport implements ToCollection
                 }
                 
             }
-        }catch(\Exception $ex){
+        }catch(\Throwable $ex){
             Log::notice($ex->getMessage());
         }
     }
