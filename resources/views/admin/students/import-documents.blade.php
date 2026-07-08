@@ -64,7 +64,6 @@ Import Students Documents
 <script>
 function loadUplodedData(){
 
-    
 }
 
 $(document).ready(function() {
@@ -74,26 +73,66 @@ $(document).ready(function() {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         }
     });
-    
 
+    // Validate file size immediately when user selects a file
     $('#file').change(function(e){
-        var fileName = e.target.files[0].name;
-        $('#file_label').html(fileName);
+        var file = e.target.files[0];
+        if (!file) return;
+
+        var maxSizeBytes = 50 * 1024 * 1024; // 50 MB in bytes
+
+        if (file.size > maxSizeBytes) {
+            // Reset the input so the user can pick a different file
+            $(this).val('');
+            $('#file_label').html('Choose file');
+            Swal.fire({
+                position: 'top-end',
+                icon: 'error',
+                title: 'File is too large. Maximum allowed size is 50MB.',
+                showConfirmButton: false,
+                timer: 5000,
+                width: 350,
+                toast: true,
+            });
+            return;
+        }
+
+        $('#file_label').html(file.name);
     });
 
 
-    $('#frmUpload').on('submit',function(e){
+    $('#frmUpload').on('submit', function(e){
         e.preventDefault();
+
+        // Guard: double-check file size before sending to server
+        var fileInput = document.getElementById('file');
+        if (fileInput.files.length > 0) {
+            var fileSize = fileInput.files[0].size;
+            var maxSizeBytes = 50 * 1024 * 1024;
+            if (fileSize > maxSizeBytes) {
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'File is too large. Maximum allowed size is 50MB.',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    width: 350,
+                    toast: true,
+                });
+                return;
+            }
+        }
+
         var formData = new FormData(this);
 
         $.ajax({
-            url : $(this).attr("action"),
+            url: $(this).attr("action"),
             type: "POST",
-            data : formData,
+            data: formData,
             processData: false,
             contentType: false,
-            success:function(data, textStatus, jqXHR){
-                if(data==1){
+            success: function(data, textStatus, jqXHR){
+                if(data.success){
                     Swal.fire({
                         position: 'top-end',
                         icon: 'success',
@@ -101,7 +140,7 @@ $(document).ready(function() {
                         showConfirmButton: false,
                         timer: 3000,
                         width: 250,
-                        toast:true,
+                        toast: true,
                     });
                     $('#frmUpload')[0].reset();
                     $('#file_label').html('Choose file');
@@ -109,20 +148,39 @@ $(document).ready(function() {
                     Swal.fire({
                         position: 'top-end',
                         icon: 'error',
-                        title: 'An error occured while tring to process the File.',
+                        title: data.error || 'An error occurred while trying to process the File.',
                         showConfirmButton: false,
                         timer: 5000,
                         width: 300,
-                        toast:true,
+                        toast: true,
                     });
                 }
-               
             },
             error: function(jqXHR, textStatus, errorThrown){
-                //if fails     
+                var msg = 'An unexpected error occurred.';
+                if(jqXHR.responseJSON && jqXHR.responseJSON.error){
+                    msg = jqXHR.responseJSON.error;
+                } else if(jqXHR.status == 413){
+                    msg = 'File is too large. Maximum allowed size is 50MB.';
+                } else if(jqXHR.status == 422){
+                    msg = 'Invalid file. Only PDF and ZIP files under 50MB are allowed.';
+                } else if(jqXHR.status == 403){
+                    msg = 'You do not have permission to upload files.';
+                } else if(jqXHR.status == 500){
+                    msg = 'A server error occurred. Please try again or contact support.';
+                }
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'error',
+                    title: msg,
+                    showConfirmButton: false,
+                    timer: 5000,
+                    width: 350,
+                    toast: true,
+                });
             }
         });
-    });    
+    });
 
 });
 </script>

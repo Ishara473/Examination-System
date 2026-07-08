@@ -114,24 +114,54 @@ $(document).ready(function() {
             contentType: false,
             success:function(data, textStatus, jqXHR){
                 if(typeof data.errors !== 'undefined'){
-                    console.log(data.errors);
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Upload failed. Please check the file and try again.',
+                        showConfirmButton: false,
+                        timer: 4000,
+                        width: 320,
+                        toast: true,
+                    });
                 }else{
                     $.get('{{url('/admin/student/get-transferred-list')}}',function(data){ 
+
+                        if (data.recordCount === 0) {
+                            Swal.fire({
+                                position: 'top-end',
+                                icon: 'error',
+                                title: 'No matching students found. None of the registration numbers in the file exist in the system.',
+                                showConfirmButton: false,
+                                timer: 6000,
+                                width: 420,
+                                toast: true,
+                            });
+                            $('#processUploadSection').addClass('d-none');
+                            return;
+                        }
+
                         var html = '';
-                        html += '<tr><th>registration no</th></tr>';             
+                        html += '<tr><th>Registration No</th></tr>';             
                         $.each(data.records,function( key, value ) {
                             html += '<tr>';
                             html += '<td>'+value.registration_no+'</td>';
                             html += '</tr>';
                         });
-                        html += '';
                         $('#uploadSample').html(html);
                         $('#processUploadSection').removeClass('d-none');
                     });
                 }
             },
             error: function(jqXHR, textStatus, errorThrown){
-                //if fails     
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'An unexpected error occurred. Please try again.',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    width: 320,
+                    toast: true,
+                });
             }
         });
     });
@@ -153,18 +183,61 @@ $(document).ready(function() {
                     type: "POST",
                     data : $(this).serialize(),
                     success:function(data, textStatus, jqXHR){
-                        if(data==1){
+                        if(data.success){
+                            var titleMsg = data.removed + ' student(s) removed successfully.';
+                            var iconType = 'success';
+                            var textMsg = '';
+                            var timerVal = 3000;
+                            var widthVal = 300;
+                            
+                            if (data.notFound && data.notFound.length > 0) {
+                                iconType = 'warning';
+                                titleMsg = 'Removed with warnings';
+                                textMsg = data.removed + ' student(s) removed. Not found: ' + data.notFound.join(', ');
+                                timerVal = 8000;
+                                widthVal = 400;
+                            }
+                            
                             Swal.fire({
                                 position: 'top-end',
-                                icon: 'success',
-                                title: 'File was Uploaded',
+                                icon: iconType,
+                                title: titleMsg,
+                                text: textMsg,
                                 showConfirmButton: false,
-                                timer: 3000,
-                                width: 250,
-                                toast:true,
+                                timer: timerVal,
+                                width: widthVal,
+                                toast: true
+                            }).then(() => {
+                                location.reload();
                             });
-                            location.reload(); 
+                        } else if (data.error) {
+                            Swal.fire({
+                                position: 'top-end',
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.error,
+                                showConfirmButton: false,
+                                timer: 6000,
+                                width: 400,
+                                toast: true
+                            });
                         }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        var msg = 'An unexpected error occurred.';
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+                            msg = jqXHR.responseJSON.error;
+                        }
+                        Swal.fire({
+                            position: 'top-end',
+                            icon: 'error',
+                            title: 'Error',
+                            text: msg,
+                            showConfirmButton: false,
+                            timer: 6000,
+                            width: 400,
+                            toast: true
+                        });
                     }
                 });
             }else{

@@ -99,7 +99,7 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success:function(data, textStatus, jqXHR){
-                if(data>0){
+                if(data.success){
                     Swal.fire({
                         position: 'top-end',
                         icon: 'success',
@@ -115,7 +115,7 @@ $(document).ready(function() {
                     Swal.fire({
                         position: 'top-end',
                         icon: 'error',
-                        title: 'An error occured while tring to process the File.',
+                        title: data.error || 'An error occurred while trying to process the File.',
                         showConfirmButton: false,
                         timer: 5000,
                         width: 300,
@@ -125,7 +125,27 @@ $(document).ready(function() {
                 
             },
             error: function(jqXHR, textStatus, errorThrown){
-                //if fails     
+                var msg = 'An unexpected error occurred.';
+                if(jqXHR.responseJSON && jqXHR.responseJSON.error){
+                    msg = jqXHR.responseJSON.error;
+                }else if(jqXHR.status == 413){
+                    msg = 'File is too large. Maximum allowed size is 50MB.';
+                }else if(jqXHR.status == 422){
+                    msg = 'Invalid file. Only JPG, JPEG, and ZIP files under 50MB are allowed.';
+                }else if(jqXHR.status == 403){
+                    msg = 'You do not have permission to upload files.';
+                }else if(jqXHR.status == 500){
+                    msg = 'Server error. Please check the file and try again.';
+                }
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'error',
+                    title: msg,
+                    showConfirmButton: false,
+                    timer: 5000,
+                    width: 350,
+                    toast:true,
+                });
             }
         });
     });    

@@ -581,6 +581,15 @@ class AdminStudentController extends Controller{
             abort(403, 'Unauthorized action.');
         }
 
+        $validator = Validator::make($request->all(), [
+            'type' => 'required|integer|in:1,2',
+            'images' => 'required|file|mimes:jpg,jpeg,zip|max:51200',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
         if($request->type==1){
             $path = storage_path() . '/Student/Image/Profile/1/';
         }else{
@@ -594,19 +603,17 @@ class AdminStudentController extends Controller{
         $file = $request->file('images');
         if(!empty($file)) {
             $extension = $file->extension();
-            \Log::alert($extension);
             if($extension == 'jpg' || $extension == 'jpeg'){
                 $image = $file->getClientOriginalName();
                 $nic = \explode('.',$image);
                 $nic = trim($nic[0]);
-                // $regNo = substr($name,0,2).'/'.substr($name,2,4).'/'.substr($name,6,3);
 
                 $student = Student::where('id_no','=',$nic)->first();
                 if(!empty($student)){
                     $file->move($path,$student->id.'.jpg');
-                    return 1;
+                    return response()->json(['success' => true], 200);
                 }
-                return -3;
+                return response()->json(['error' => 'No student found with NIC matching filename.'], 404);
             }elseif($extension == 'zip'){
                 $zip = new \ZipArchive;
                 $file_path = $file->getPathName();
@@ -620,7 +627,6 @@ class AdminStudentController extends Controller{
 
                     foreach($images as $image){
                         $nic = trim(substr($image,0, -4));
-                        // $regNo = substr($image,0,2).'/'.substr($image,2,4).'/'.substr($image,6,3);
 
                         $student = Student::where('id_no','=',$nic)->first();
                         if(!empty($student)){
@@ -632,7 +638,6 @@ class AdminStudentController extends Controller{
 
                     foreach($images as $image){
                         $nic = trim(substr($image,0, -5));
-                        // $regNo = substr($image,0,2).'/'.substr($image,2,4).'/'.substr($image,6,3);
 
                         $student = Student::where('id_no','=',$nic)->first();
                         if(!empty($student)){
@@ -647,11 +652,10 @@ class AdminStudentController extends Controller{
                     }
                     rmdir( $temppath );
                 }
-                return 1;
+                return response()->json(['success' => true], 200);
             }
-            return -2;
         }
-        return -1;       
+        return response()->json(['error' => 'Invalid file type. Only JPG, JPEG, and ZIP are allowed.'], 422);       
     }
 
 
@@ -726,7 +730,21 @@ class AdminStudentController extends Controller{
         }
 
         $records = TempTranferredList::select('registration_no')->orderBy('registration_no')->pluck('registration_no')->toArray();
-        $studentIds = Student::whereIn('registration_no',$records)->pluck('id')->toArray();
+
+        if (empty($records)) {
+            return response()->json(['error' => 'No records found in the uploaded list. Please upload a valid file first.'], 422);
+        }
+
+        $existingStudents = Student::whereIn('registration_no', $records)->select('id', 'registration_no')->get();
+        $studentIds = $existingStudents->pluck('id')->toArray();
+        $existingRegs = $existingStudents->pluck('registration_no')->toArray();
+
+        if (empty($studentIds)) {
+            return response()->json(['error' => 'None of the registration numbers in the uploaded file matched any student in the system.'], 422);
+        }
+
+        // Calculate not found before deletion
+        $notFound = array_diff($records, $existingRegs);
 
         Student::whereIn('id', $studentIds)->delete();
         StudentAccDetail::whereIn('student_id', $studentIds)->delete();
@@ -737,7 +755,11 @@ class AdminStudentController extends Controller{
         SpecializationRequest::whereIn('student_id', $studentIds)->delete();
         YearRegistration::whereIn('student_id', $studentIds)->delete();
         
-        return 1;
+        return response()->json([
+            'success' => true,
+            'removed' => count($studentIds),
+            'notFound' => array_values($notFound),
+        ]);
     }
 
     /* **********************************************************************************************/
@@ -757,56 +779,99 @@ class AdminStudentController extends Controller{
             abort(403, 'Unauthorized action.');
         }
 
-        $path = storage_path() . '/Student/Documents/';
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:pdf,zip|max:51200',
+        ]);
 
-        if (!file_exists($path)) {
-            mkdir($path, 0777, true);
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first('file')], 422);
         }
-        $file = $request->file('file');
-        if(!empty($file)){
-            $extension = $file->extension();
-            if($extension == 'pdf'){
-                // dd($file);
-                $name = $file->getClientOriginalName();
-                $regNo = substr($name,0,2).'/'.substr($name,2,4).'/'.substr($name,6,3);
-                $student = Student::where('registration_no','=',$regNo)->first();
 
-                if(!empty($student)){
-                    $file->move($path,$student->id.'.pdf');
-                    return 1;
-                }
-                return -2;
-            }elseif($extension == 'zip'){
-                $zip = new \ZipArchive;
-                $file_path = $file->getPathName();
-                $res = $zip->open($file_path);
-                if ($res === TRUE) {
-                    $temppath = storage_path() . '/data/Student/Document/Temp/';
-                    $zip->extractTo($temppath);
-                    $zip->close();
-                    chdir($temppath);
-                    $documents = glob("*.pdf");
-                    foreach($documents as $file){
-                        $file = trim($file);
-                        $regNo = substr($file,0,2).'/'.substr($file,2,4).'/'.substr($file,6,3);
-                        $student = Student::where('registration_no','=',$regNo)->first();
-                        if(!empty($student)){
-                            rename($temppath.$file, $path.$student->id.'.pdf');
+        try {
+            $path = storage_path() . '/Student/Documents/';
+
+            if (!file_exists($path)) {
+                mkdir($path, 0777, true);
+            }
+
+            $file = $request->file('file');
+            if (!empty($file)) {
+                $extension = $file->extension();
+
+                if ($extension == 'pdf') {
+                    $name = $file->getClientOriginalName();
+                    $regNo = substr($name, 0, 2) . '/' . substr($name, 2, 4) . '/' . substr($name, 6, 3);
+                    $student = Student::where('registration_no', '=', $regNo)->first();
+
+                    if (!empty($student)) {
+                        $file->move($path, $student->id . '.pdf');
+                        return response()->json(['success' => true], 200);
+                    }
+                    return response()->json(['error' => 'No student found with registration number extracted from filename.'], 404);
+
+                } elseif ($extension == 'zip') {
+                    $zip = new \ZipArchive;
+                    $file_path = $file->getPathName();
+                    $res = $zip->open($file_path);
+
+                    if ($res === TRUE) {
+                        $temppath = storage_path() . '/data/Student/Document/Temp/';
+
+                        if (!file_exists($temppath)) {
+                            mkdir($temppath, 0777, true);
                         }
+
+                        $zip->extractTo($temppath);
+                        $zip->close();
+
+                        // Glob only the PDF files at the top level of the temp directory
+                        $documents = glob($temppath . '*.pdf');
+                        foreach ($documents as $docFile) {
+                            $baseName = basename($docFile);
+                            $baseName = trim($baseName);
+                            $regNo = substr($baseName, 0, 2) . '/' . substr($baseName, 2, 4) . '/' . substr($baseName, 6, 3);
+                            $student = Student::where('registration_no', '=', $regNo)->first();
+                            if (!empty($student)) {
+                                rename($docFile, $path . $student->id . '.pdf');
+                            }
+                        }
+
+                        // Recursively delete everything in the temp directory
+                        $this->deleteDirectory($temppath);
+                    } else {
+                        return response()->json(['error' => 'Could not open the ZIP file. It may be corrupted.'], 422);
                     }
 
-                    chdir(storage_path() . '/Student/Documents/');
-                    $files = glob( $temppath . '*', GLOB_MARK);
-                    foreach( $files as $file ){
-                        unlink($file);      
-                    }
-                    rmdir($temppath);
+                    return response()->json(['success' => true], 200);
                 }
-                return 1;
+            }
+
+            return response()->json(['error' => 'Invalid file type. Only PDF and ZIP are allowed.'], 422);
+
+        } catch (\Exception $e) {
+            \Log::error('upload_documents error: ' . $e->getMessage());
+            return response()->json(['error' => 'An error occurred while processing the file. Please try again.'], 500);
+        }
+    }
+
+    /**
+     * Recursively delete a directory and all its contents.
+     */
+    private function deleteDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) return;
+        $items = array_diff(scandir($dir), ['.', '..']);
+        foreach ($items as $item) {
+            $target = $dir . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($target)) {
+                $this->deleteDirectory($target);
+            } else {
+                @unlink($target);
             }
         }
-        return -1;  
+        @rmdir($dir);
     }
+
 
     public function download_document(Request $request, int $id){
         if (!(Auth::user()->hasPermissionTo('student:view') || Auth::user()->hasRole('Admin') )){ 
