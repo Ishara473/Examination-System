@@ -12,3 +12,14 @@ Homestead.yaml
 npm-debug.log
 yarn-error.log
 *.txt
+
+# Temporary Test Scripts
+check_academic*.php
+check_gpa.php
+check_student_*.php
+check_temp_gpa*.php
+fetch_classes.php
+generate_gpa_upload.php
+test_data_script.php
+test_db_count.php
+tinker_script.php
