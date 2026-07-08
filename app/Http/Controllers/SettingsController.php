@@ -714,12 +714,7 @@ class SettingsController extends Controller
             $data = [];
             $col = ['2'=>'FirstName','3'=>'LastName','4'=>'Email','5'=>'Designation'];
 
-            $a = User::select('id as ID',  'first_name as FirstName', 'last_name as LastName','email as Email', 'designation as Designation' );
-
-            if(strlen($request->search) > 2){
-                $search = '%'.$request->search.'%';
-                $a->where('email','like',$search)->orWhere('last_name','like',$search);
-            }
+            $a = User::searchUsers($request->search);
             $ac = clone $a;
             $Count = $ac->count();
 
