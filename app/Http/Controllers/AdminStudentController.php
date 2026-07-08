@@ -667,7 +667,7 @@ class AdminStudentController extends Controller{
         $student = Student::find($request->id);
         $accDetails = $student->AcademicDetail()->first();
         $accDetails->main_scholarship = $request->main_scholarship;
-        $accDetails->sub_scholarship = $request->sub_scholarship;
+        $accDetails->other_scholarship = $request->other_scholarship;
         $accDetails->scholarship_start_date = $request->scholarship_start_date;
         $accDetails->save();
         return redirect()->route('admin.student.view',$student->id);
@@ -915,22 +915,23 @@ class AdminStudentController extends Controller{
             abort(403, 'Unauthorized action.');
         }
 
-        $validator = Validator::make($request->all(), ['student_list' => 'required|file']);
+        $validator = Validator::make($request->all(), ['student_list' => 'required|file|mimes:xlsx,xls,csv|max:51200']);
         if($validator->fails()){
-            return response()->json(['errors'=>$validator->errors()]);
-        }else{
-            DB::table('temp_graduate_list')->truncate();
+            return response()->json(['errors'=>$validator->errors()->first('student_list')], 422);
+        }
 
-            $path = storage_path() . '/data/registrations/graduate/';
-            $file = $request->file('student_list');        
-            $file_name = time().'-'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
+        DB::table('temp_graduate_list')->truncate();
 
-            if($file->move($path, $file_name)){
-                Excel::import(new GraduateImport(), $path.$file_name);
-                return 1;
-            }
-        }            
-        return response()->json(['errors'=>'Oops! something when wrong. Refresh the page and try to upload again.']); 
+        $path = storage_path() . '/data/registrations/graduate/';
+        $file = $request->file('student_list');        
+        $file_name = time().'-'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
+
+        if($file->move($path, $file_name)){
+            Excel::import(new GraduateImport(), $path.$file_name);
+            return response()->json(['success' => true], 200);
+        }
+
+        return response()->json(['errors'=>'Oops! Something went wrong. Refresh the page and try again.'], 500); 
     }
 
     public function graduate_list(Request $request)
@@ -951,22 +952,46 @@ class AdminStudentController extends Controller{
         }
 
         $records = TempGraduateList::select('registration_no','degree_effective_date')->orderBy('registration_no')->get();
-        if($records)
-        {
-            foreach($records as $r){
-                $student =  Student::where('registration_no','=',$r->registration_no)->first();
-                if($student){
-                    $student->status = 2;
-                    $student->save();
-                    $acc = $student->AcademicDetail()->first();
+
+        if ($records->isEmpty()) {
+            return response()->json(['error' => 'No records found in the uploaded list. Please upload a valid file first.'], 422);
+        }
+
+        $graduated = 0;
+        $notFound = [];
+
+        foreach($records as $r){
+            $student = Student::where('registration_no','=',$r->registration_no)->first();
+            if($student){
+                $student->status = 2;
+                $student->save();
+                $acc = $student->AcademicDetail()->first();
+                if($acc){
                     $acc->status = 2;
                     $acc->is_complete = 1;
                     $acc->degree_effective_date = $r->degree_effective_date;
-                    $acc->save();   
+                    $acc->save();
                 }
+                $graduated++;
+            } else {
+                $notFound[] = $r->registration_no;
             }
         }
-        return 1;
+
+        if ($graduated === 0) {
+            return response()->json(['error' => 'None of the registration numbers in the uploaded file matched any student in the system.'], 422);
+        }
+
+        $response = [
+            'success' => true,
+            'graduated' => $graduated,
+        ];
+
+        if (!empty($notFound)) {
+            $response['skipped'] = $notFound;
+        }
+
+        return response()->json($response);
     }
 
     /* **********************************************************************************************/
@@ -1054,28 +1079,41 @@ class AdminStudentController extends Controller{
             abort(403, 'Unauthorized action.');
         }
 
-        $validator = Validator::make($request->all(), ['student_list' => 'required|file','type'=>'required']);
+        $validator = Validator::make($request->all(), [
+            'student_list' => 'required|file|mimes:xlsx,xls,csv|max:51200',
+            'type' => 'required|integer',
+        ]);
         if($validator->fails()){
-            return response()->json(['errors'=>$validator->errors()]);
-        }else{
-            DB::table('temp_scholarship_upload')->truncate();
+            return response()->json(['errors' => $validator->errors()->first()], 422);
+        }
 
-            $path = storage_path() . '/data/registrations/scholarship/';
-            $file = $request->file('student_list');        
-            $file_name = time().'-'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
+        DB::table('temp_scholarship_upload')->truncate();
 
-            if($file->move($path, $file_name)){
+        $path = storage_path() . '/data/registrations/scholarship/';
+        $file = $request->file('student_list');        
+        $file_name = time().'-'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
+
+        if($file->move($path, $file_name)){
+            try {
                 Excel::import(new ScholarshipImport($request->type), $path.$file_name);
-
-                $sql = 'UPDATE temp_scholarship_upload x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id';
-                DB::update($sql);
-
-                $sql = 'UPDATE temp_scholarship_upload x INNER JOIN student_academic_details y on x.student_id = y.student_id SET y.degree_effective_date = x.awarded_date, y.main_scholarship = x.scholarship_type';
-                DB::update($sql);
-
-                return 1;
+            } catch (\Exception $e) {
+                return response()->json(['error' => $e->getMessage()], 422);
             }
-        }            
-        return response()->json(['errors'=>'Oops! something when wrong. Refresh the page and try to upload again.']); 
+
+            $sql = 'UPDATE temp_scholarship_upload x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id';
+            DB::update($sql);
+
+            $matchedCount = DB::table('temp_scholarship_upload')->where('student_id', '>', 0)->count();
+
+            if ($matchedCount === 0) {
+                return response()->json(['error' => 'No matching students found for the registration numbers in the file.'], 422);
+            }
+
+            DB::update('UPDATE temp_scholarship_upload x INNER JOIN student_academic_details y on x.student_id = y.student_id SET y.scholarship_start_date = x.awarded_date, y.main_scholarship = x.scholarship_type');
+
+            return response()->json(['success' => true, 'updated' => $matchedCount], 200);
+        }
+
+        return response()->json(['errors' => 'Oops! Something went wrong. Refresh the page and try again.'], 500); 
     }
 }

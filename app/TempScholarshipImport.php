@@ -15,7 +15,11 @@ class TempScholarshipImport extends Model
     protected $fillable = [ 'registration_no', 'student_id', 'awarded_date', 'scholarship_type' ];
 
     public function setAwardedDateAttribute($date){
-        return $this->attributes['awarded_date'] = Carbon::parse($date)->format('Y-m-d');
+        if (empty($date)) {
+            $this->attributes['awarded_date'] = null;
+        } else {
+            $this->attributes['awarded_date'] = Carbon::parse($date)->format('Y-m-d');
+        }
     }
 
     public function getAwardedDateAttribute($date){

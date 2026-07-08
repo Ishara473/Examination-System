@@ -118,25 +118,56 @@ $(document).ready(function() {
             contentType: false,
             success:function(data, textStatus, jqXHR){
                 if(typeof data.errors !== 'undefined'){
-                    console.log(data.errors);
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'error',
+                        title: data.errors,
+                        showConfirmButton: false,
+                        timer: 4000,
+                        width: 320,
+                        toast: true,
+                    });
                 }else{
                     $.get('{{url('/admin/student/get-graduated-list')}}',function(data){ 
+                        if (data.recordCount === 0) {
+                            Swal.fire({
+                                position: 'top-end',
+                                icon: 'error',
+                                title: 'No registration numbers found in the uploaded file.',
+                                showConfirmButton: false,
+                                timer: 5000,
+                                width: 400,
+                                toast: true,
+                            });
+                            return;
+                        }
                         var html = '';
-                        html += '<tr><th>registration no</th><th>effective date</th></tr>';             
+                        html += '<tr><th>Registration No</th><th>Effective Date</th></tr>';             
                         $.each(data.records,function( key, value ) {
                             html += '<tr>';
                             html += '<td>'+value.registration_no+'</td>';
                             html += '<td>'+value.degree_effective_date+'</td>';
                             html += '</tr>';
                         });
-                        html += '';
                         $('#uploadSample').html(html);
                         $('#processUploadSection').removeClass('d-none');
                     });
                 }
             },
             error: function(jqXHR, textStatus, errorThrown){
-                //if fails     
+                var msg = 'An unexpected error occurred. Please try again.';
+                if(jqXHR.responseJSON && jqXHR.responseJSON.errors){
+                    msg = jqXHR.responseJSON.errors;
+                }
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'error',
+                    title: msg,
+                    showConfirmButton: false,
+                    timer: 5000,
+                    width: 350,
+                    toast: true,
+                });
             }
         });
     });
@@ -158,18 +189,35 @@ $(document).ready(function() {
                     type: "POST",
                     data : $(this).serialize(),
                     success:function(data, textStatus, jqXHR){
-                        if(data==1){
+                        if(data.success){
+                            var msg = data.graduated + ' student(s) graduated successfully.';
+                            if(data.skipped && data.skipped.length > 0){
+                                msg += '<br/><br/>Not found (skipped): ' + data.skipped.join(', ');
+                            }
                             Swal.fire({
-                                position: 'top-end',
                                 icon: 'success',
-                                title: 'File was Uploaded',
-                                showConfirmButton: false,
-                                timer: 3000,
-                                width: 250,
-                                toast:true,
+                                title: 'Graduation Complete',
+                                html: msg,
+                                confirmButtonColor: '#3085d6',
+                            }).then(() => { location.reload(); });
+                        } else if (data.error) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Graduation Failed',
+                                text: data.error,
                             });
-                            location.reload(); 
                         }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        var msg = 'An unexpected error occurred.';
+                        if(jqXHR.responseJSON && jqXHR.responseJSON.error){
+                            msg = jqXHR.responseJSON.error;
+                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Graduation Failed',
+                            text: msg,
+                        });
                     }
                 });
             }else{
