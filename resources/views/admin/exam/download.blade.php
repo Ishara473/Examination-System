@@ -21,8 +21,9 @@ Print Exam Applications
     <div class="row" id="filterSection">
         <div class="col-md-2">
             <div class="form-group">
-                <label for="Semester">Semester</label>
-                <select id="Semester" name="Semester" class="form-control">
+                <label for="Semester">Select Semester</label>
+                <select id="Semester" name="Semester" class="form-control" placeholder="Select a semester">
+                    <option value="" selected disabled>Select a semester</option>
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -36,15 +37,15 @@ Print Exam Applications
         </div>
         <div class="col-md-3">
             <div class="form-group">
-                <label for="Search">Registration No / NIC</label>
-                <input type="input" class="form-control" id="Search" name="Search">
+                <label for="Search">Registration No / NIC (Optional)</label>
+                <input type="input" class="form-control" id="Search" name="Search" placeholder="Enter Registration No or NIC">
             </div>
         </div>
         <div class="col-md-7">
             <div class="form-group d-inline">
                 <label class="d-block">&nbsp;</label>
-                <button class="btn btn-primary btn-grey-overlay btn-icon-split" id="btnDownloadProperPDF" ><span class="icon"><i class="fa fa-print"></i></span> <span class="text">Proper Admissions</span></button>
-                <button class="btn btn-info btn-grey-overlay btn-icon-split" id="btnDownloadRepeatPDF" ><span class="icon"><i class="fa fa-print"></i></span> <span class="text">Repeat Admissions</span></button>
+                <button class="btn btn-primary btn-grey-overlay btn-icon-split" id="btnDownloadProperPDF" ><span class="icon"><i class="fa fa-print"></i></span> <span class="text">Print Proper Admissions</span></button>
+                <button class="btn btn-info btn-grey-overlay btn-icon-split" id="btnDownloadRepeatPDF" ><span class="icon"><i class="fa fa-print"></i></span> <span class="text">Print Repeat Admissions</span></button>
             </div>
         </div>
     </div>

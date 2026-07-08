@@ -54,7 +54,14 @@ class AdminExamController extends Controller
         }
 
         $data = [];
-        if(empty($request->semester)) return;
+        if(empty($request->semester)){
+            return response()->json([
+                'draw' => (int) ($request->draw ?? 0),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+            ]);
+        }
         if(!isset($request->type) || $request->type == 'json'){
 
             $col = [2=>'RegistrationNo',3=>'Name',4=>'Batch',5=>'IDNo'];
@@ -225,7 +232,9 @@ class AdminExamController extends Controller
                             );
             if(!empty($search))$q->where('student_personal_details.registration_no','like',$search.'%')->orWhere('student_personal_details.id_no','like',$search.'%');
             $students = $q->get();
-            if(empty($students) || $students->isEmpty()) return ;
+            if(empty($students) || $students->isEmpty()) {
+                return redirect()->back()->with('error', 'No admission records found for the selected semester/search criteria.');
+            }
 
             foreach($students as $std){
                 $data[$std->id] = ['name'=>$std->name,'full_name'=>$std->full_name,'regno'=>$std->registration_no,'indexno'=>$std->index_no,'idno'=>$std->id_no,'program'=>$std->program,'subjects'=>[]];
@@ -295,7 +304,9 @@ class AdminExamController extends Controller
                             );
             if(!empty($search))$q->where('student_personal_details.registration_no','like',$search.'%')->orWhere('student_personal_details.id_no','like',$search.'%');
             $students = $q->get();
-            if(empty($students) || $students->isEmpty()) return ;
+            if(empty($students) || $students->isEmpty()) {
+                return redirect()->back()->with('error', 'No admission records found for the selected semester/search criteria.');
+            }
 
             foreach($students as $std){
                 $data[$std->id] = ['name'=>$std->name,'full_name'=>$std->full_name,'regno'=>$std->registration_no,'indexno'=>$std->index_no,'idno'=>$std->id_no,'program'=>$std->program,'subjects'=>[]];
@@ -341,7 +352,7 @@ class AdminExamController extends Controller
     }
 
     public function approve_by_subject(Request $request) {
-        if (!(Auth::user()->hasPermissionTo('examapp:approve') || Auth::user()->hasRole('Admin') )){ 
+        if (!(Auth::user()->hasPermissionTo('examapp:approve') || Auth::user()->hasPermissionTo('results:process') || Auth::user()->hasRole('Admin') )){ 
             abort(403, 'Unauthorized action.');
         }
 
@@ -435,7 +446,7 @@ class AdminExamController extends Controller
     }
 
     public function approve_application_subject(Request $request){
-        if (!(Auth::user()->hasPermissionTo('examapp:approve') || Auth::user()->hasRole('Admin') )){ 
+        if (!(Auth::user()->hasPermissionTo('examapp:approve') || Auth::user()->hasPermissionTo('results:process') || Auth::user()->hasRole('Admin') )){ 
             abort(403, 'Unauthorized action.');
         }
 
