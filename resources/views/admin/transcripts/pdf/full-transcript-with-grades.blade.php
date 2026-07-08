@@ -69,7 +69,7 @@
         <table style="width:85%;border:0px;font-size:10px; margin:0 auto">
             <?php
             $year = 1;
-            $semesters = $subjects[1];
+            $semesters = isset($subjects[1]) ? $subjects[1] : [];
             $mainRow = '<tr>';
                 foreach($semesters as $semester=>$subArray){
                     $sm = ($semester%2==0)?2:1;
@@ -95,7 +95,7 @@
             ?>
             <?php
             $year = 2;
-            $semesters = $subjects[2];
+            $semesters = isset($subjects[2]) ? $subjects[2] : [];
             $mainRow = '<tr>';
                 foreach($semesters as $semester=>$subArray){
                     $sm = ($semester%2==0)?2:1;
@@ -121,7 +121,7 @@
             ?>
             <?php
             $year = 3;
-            $semesters = $subjects[3];
+            $semesters = isset($subjects[3]) ? $subjects[3] : [];
             $mainRow = '<tr>';
                 foreach($semesters as $semester=>$subArray){
                     $sm = ($semester%2==0)?2:1;
@@ -151,7 +151,9 @@
         <div style="position: absolute; bottom:0px">
             <hr/>
             <p style="width:80%;margin:auto">
-            <img src="{{public_path('images/pdf_footer.png')}}" width="100%" >
+            @if(file_exists(public_path('images/pdf_footer.png')))
+                <img src="{{ public_path('images/pdf_footer.png') }}" width="100%" >
+            @endif
             </p>
         </div>
         <p style="page-break-before: always;"> </p>
@@ -163,7 +165,7 @@
         <table style="width:85%;border:0px;font-size:10px; margin:0 auto">        
             <?php
             $year = 4;
-            $semesters = $subjects[4];
+            $semesters = isset($subjects[4]) ? $subjects[4] : [];
             $mainRow = '<tr>';
                 foreach($semesters as $semester=>$subArray){
                     $sm = ($semester%2==0)?2:1;
