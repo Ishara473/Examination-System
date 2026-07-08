@@ -136,11 +136,25 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success:function(data, textStatus, jqXHR){
-                if(data['status']>=0){
+                if(data.errors){
+                    var errorMessages = '';
+                    $.each(data.errors, function(key, value){
+                        errorMessages += value[0] + '\n';
+                    });
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'error',
+                        title: errorMessages,
+                        showConfirmButton: false,
+                        timer: 5000,
+                        width: 300,
+                        toast:true,
+                    });
+                } else if(data['status']>=0){
                     $('#processingSubject').val($('#subject').val());
-                    $.get('{{url('/admin/results/get-uploaded-results')}}',function(data){ 
+                    $.get('{{url('/admin/results/get-uploaded-results')}}',function(data){
                         var html = '';
-                        html += '<tr><th>registration no</th>><th>Year</th><th>Subject Code</th><th>Marks</th><th>Grade</th></tr>';             
+                        html += '<tr><th>registration no</th>><th>Year</th><th>Subject Code</th><th>Marks</th><th>Grade</th></tr>';
                         $.each(data,function( key, value ) {
                             html += '<tr>';
                             html += '<td>'+value.registration_no+'</td>';
@@ -167,7 +181,15 @@ $(document).ready(function() {
                 }
             },
             error: function(jqXHR, textStatus, errorThrown){
-                //if fails     
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'An error occurred while uploading the file',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    width: 300,
+                    toast:true,
+                });
             }
         });
     });

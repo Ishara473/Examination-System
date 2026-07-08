@@ -133,10 +133,30 @@ $(document).ready(function() {
                             $('#list_label').html('Choose file');
                             $('#list').val('');
                             $('#ProcessingSemester').val('');                    
+                        } else if (data.errors) {
+                            var errorMsg = '';
+                            $.each(data.errors, function(key, value) {
+                                errorMsg += value[0] + '<br>';
+                            });
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Validation Error',
+                                html: errorMsg
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'An unexpected error occurred.'
+                            });
                         }
                     },
                     error: function(jqXHR, textStatus, errorThrown){
-                        //if fails     
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Server Error',
+                            text: 'An unexpected error occurred while uploading. Please ensure you are uploading a valid CSV/Excel file.'
+                        });
                     }
                 });
             }

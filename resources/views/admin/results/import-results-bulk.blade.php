@@ -15,7 +15,6 @@ Import Results
 @endsection
 
 @section('content')
-{!!die()!!}
 <div class="card mb-1">
     <div class="card-body">
         <h4 class="text-secondary mb-3 mt-3"><i data-feather="file-text" class="mr-0 pb-1"></i> Import Student Exam Results</h4>
@@ -50,7 +49,7 @@ Import Results
             <div class="col-md-2">
                 <div class="form-group">
                     <label for="year">Year</label>
-                <input type="input" class="form-control yearpicker" id="year" name="year" value="{{settings('year')-1}}">
+                <input type="input" class="form-control yearpicker" id="year" name="year" value="" placeholder="Select year">
                 </div>
             </div>
 
@@ -138,8 +137,22 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success:function(data, textStatus, jqXHR){
-                if(data['status']>0){
-                    $('#processingSubject').val($('#subject').val());
+                if(data.errors){
+                    var errorMessages = '';
+                    $.each(data.errors, function(key, value){
+                        errorMessages += value[0] + '\n';
+                    });
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'error',
+                        title: errorMessages,
+                        showConfirmButton: false,
+                        timer: 5000,
+                        width: 300,
+                        toast:true,
+                    });
+                }else if(data['status']>0){
+                    $('#processingSubject').val('');
                     $.get('{{url('/admin/results/get-uploaded-results')}}',function(data){ 
                         var html = '';
                         html += '<tr><th>registration no</th>><th>Year</th><th>Subject Code</th><th>Marks</th><th>Grade</th></tr>';             
@@ -160,9 +173,19 @@ $(document).ready(function() {
                     Swal.fire({
                         position: 'top-end',
                         icon: 'error',
-                        title: 'A subject code didn\'t Match',
+                        title: data['msg'],
                         showConfirmButton: false,
                         timer: 3000,
+                        width: 300,
+                        toast:true,
+                    });
+                }else if(data['status']<=0){
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'error',
+                        title: data['msg'] || 'Bulk upload failed',
+                        showConfirmButton: false,
+                        timer: 5000,
                         width: 300,
                         toast:true,
                     });
