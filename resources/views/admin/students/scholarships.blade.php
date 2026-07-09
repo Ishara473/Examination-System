@@ -27,9 +27,9 @@ Import Students Scholarship Details
                 <div class="row">            
                     <div class="col-md-12">
                         <p class="mb-0">
-                            Upload a <strong>Excel</strong> file with the fields in the given order as shown below. Make sure the <strong>dates are in iso format (YYYY-MM-DD)</strong> format<br/>
+                            Upload an <strong>Excel</strong> file with the fields in the given order as shown below. Make sure the <strong>dates are in ISO format (YYYY-MM-DD)</strong>.<br/>
                         </p>
-                        <p class="ml-3">[Registration Number],[Awarded Date]</p>                       
+                        <p class="ml-3">[Registration Number], [Awarded Date]</p>                       
                     </div>
                 </div>
             </div>
@@ -100,33 +100,46 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success:function(data, textStatus, jqXHR){
-                if(data>0){
+                if(data.success){
+                    var msg = data.updated + ' student(s) updated successfully.';
                     Swal.fire({
-                        position: 'top-end',
                         icon: 'success',
-                        title: 'File was Uploaded',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        width: 250,
-                        toast:true,
+                        title: 'Scholarships Uploaded',
+                        text: msg,
                     });
                     $('#frmUpload')[0].reset();
-                    $('#images_label').html('Choose file');
+                    $('#student_list_label').html('Choose file');
                 }else{
                     Swal.fire({
                         position: 'top-end',
                         icon: 'error',
-                        title: 'An error occured while tring to process the File.',
+                        title: data.error || 'An error occurred while trying to process the File.',
                         showConfirmButton: false,
                         timer: 5000,
-                        width: 300,
+                        width: 350,
                         toast:true,
                     });
                 }
                 
             },
             error: function(jqXHR, textStatus, errorThrown){
-                //if fails     
+                var msg = 'An unexpected error occurred.';
+                if(jqXHR.responseJSON && (jqXHR.responseJSON.error || jqXHR.responseJSON.errors)){
+                    msg = jqXHR.responseJSON.error || jqXHR.responseJSON.errors;
+                }else if(jqXHR.status == 413){
+                    msg = 'File is too large. Maximum allowed size is 50MB.';
+                }else if(jqXHR.status == 422){
+                    msg = 'Invalid file or data. Check the format and try again.';
+                }
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'error',
+                    title: msg,
+                    showConfirmButton: false,
+                    timer: 5000,
+                    width: 350,
+                    toast:true,
+                });
             }
         });
     });    
