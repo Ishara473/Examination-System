@@ -83,6 +83,7 @@ Import Results
             {{ Form::open(['url'=>url('/admin/results/process-upload-results'),'method'=>'post','enctype'=>'multipart/form-data','id'=>'frmProcess']) }}
             <div class="col-md-12"><hr/></div>
             <input type="hidden" name="processingSubject" id="processingSubject" value="" />
+            <input type="hidden" name="update" id="processUpdate" value="0" />
             <div class="row">
                 <div class="col-md-4 col-lg-2">
                     <div class="form-group">
@@ -152,6 +153,7 @@ $(document).ready(function() {
                     });
                 } else if(data['status']>=0){
                     $('#processingSubject').val($('#subject').val());
+                    $('#processUpdate').val($('input[name="update"]:checked').val());
                     $.get('{{url('/admin/results/get-uploaded-results')}}',function(data){
                         var html = '';
                         html += '<tr><th>registration no</th>><th>Year</th><th>Subject Code</th><th>Marks</th><th>Grade</th></tr>';
