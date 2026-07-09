@@ -42,7 +42,7 @@ System Settings
             <div class="form-group row">
                 <label for="reg_year" class="col-sm-3 col-form-label">Registration Renewal Year</label>
                 <div class="col-sm-2">
-                    <input type="text" class="form-control yearpicker" id="reg_year" value="{{settings('reg_year')}}" name="reg_year">
+                    <input type="text" class="form-control yearpicker" id="reg_year" value="{{settings('reg_year')}}" name="Settings[reg_year]">
                 </div>
             </div>
             <div class="form-group row">
