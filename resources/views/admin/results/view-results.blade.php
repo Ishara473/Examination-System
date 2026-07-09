@@ -29,7 +29,7 @@ View Results
                 <div class="col-md-2">
                 <div class="form-group">
                     <label for="subject">Subject Code</label>
-                    <input type="input" class="form-control" id="subject" name="subject" value="">
+                    <input type="text" class="form-control" id="subject" name="subject" value="" required>
                 </div>
             </div>
                 <div class="col-md-3 col-lg-2">
@@ -66,6 +66,10 @@ $(document).ready(function() {
 
     $('#BtnFilterSubmit').on('click',function(e){
         e.preventDefault();
+        if(!$('#subject')[0].checkValidity()) {
+            $('#subject')[0].reportValidity();
+            return;
+        }
         table.ajax.reload();
         // $('#exportExcel').attr('href','/admin/registration/list?type=excel&startDate='+$('#StartDate').val()+'&endDate='+$('#EndDate').val()+'&search='+$('#Search').val());
     });
