@@ -615,49 +615,64 @@ class AdminStudentController extends Controller{
                 }
                 return response()->json(['error' => 'No student found with NIC matching filename.'], 404);
             }elseif($extension == 'zip'){
-                $zip = new \ZipArchive;
                 $file_path = $file->getPathName();
-                $res = $zip->open($file_path);
-                if ($res === TRUE) {
-                    $temppath = storage_path() . '/data/Student/Image/Temp/';
-                    $zip->extractTo($temppath);
-                    $zip->close();
-                    chdir($temppath);
-                    $images = glob("*.jpg");
+                $temppath = storage_path() . '/data/Student/Image/Temp/';
 
-                    foreach($images as $image){
-                        $nic = trim(substr($image,0, -4));
-
-                        $student = Student::where('id_no','=',$nic)->first();
-                        if(!empty($student)){
-                            rename( $temppath.$image, $path.$student->id.'.jpg');
-                        }
-                    }
-                    
-                    $images = glob("*.jpeg");
-
-                    foreach($images as $image){
-                        $nic = trim(substr($image,0, -5));
-
-                        $student = Student::where('id_no','=',$nic)->first();
-                        if(!empty($student)){
-                            rename( $temppath.$image, $path.$student->id.'.jpg');
-                        }
-                    }
-
-                    chdir(storage_path() . '/Student/Image/');
-                    $files = glob( $temppath . '*', GLOB_MARK);
-                    foreach( $files as $file ){
-                        unlink($file);      
-                    }
-                    rmdir( $temppath );
+                if (!file_exists($temppath)) {
+                    mkdir($temppath, 0777, true);
                 }
+
+                try {
+                    $images = $this->getProfilePictureFilesFromZip($file_path, $temppath);
+                } catch (\RuntimeException $e) {
+                    $this->deleteDirectory($temppath);
+                    return response()->json(['error' => $e->getMessage()], 422);
+                }
+
+                foreach($images as $imagePath){
+                    $image = basename($imagePath);
+                    $nic = pathinfo($image, PATHINFO_FILENAME);
+
+                    $student = Student::where('id_no','=',$nic)->first();
+                    if(!empty($student)){
+                        rename($imagePath, $path.$student->id.'.jpg');
+                    }
+                }
+
+                $this->deleteDirectory($temppath);
                 return response()->json(['success' => true], 200);
             }
         }
         return response()->json(['error' => 'Invalid file type. Only JPG, JPEG, and ZIP are allowed.'], 422);       
     }
 
+
+    private function getProfilePictureFilesFromZip(string $filePath, string $tempPath): array
+    {
+        $zip = new \ZipArchive;
+        $res = $zip->open($filePath);
+        if ($res !== true) {
+            throw new \RuntimeException('Could not open the ZIP file. It may be corrupted.');
+        }
+
+        if (!file_exists($tempPath)) {
+            mkdir($tempPath, 0777, true);
+        }
+
+        $zip->extractTo($tempPath);
+        $zip->close();
+
+        $imageFiles = array_merge(
+            glob($tempPath . '*.jpg') ?: [],
+            glob($tempPath . '*.jpeg') ?: []
+        );
+
+        if (empty($imageFiles)) {
+            throw new \RuntimeException('The ZIP file must contain JPG or JPEG image files.');
+        }
+
+        return $imageFiles;
+    }
 
     public function update_student_scholarship(Request $request)
     {
@@ -824,8 +839,24 @@ class AdminStudentController extends Controller{
                         $zip->extractTo($temppath);
                         $zip->close();
 
-                        // Glob only the PDF files at the top level of the temp directory
-                        $documents = glob($temppath . '*.pdf');
+                        $documents = [];
+                        $iterator = new \RecursiveIteratorIterator(
+                            new \RecursiveDirectoryIterator($temppath, \FilesystemIterator::SKIP_DOTS)
+                        );
+
+                        foreach ($iterator as $fileInfo) {
+                            if ($fileInfo->isFile() && strtolower($fileInfo->getExtension()) === 'pdf') {
+                                $documents[] = $fileInfo->getPathname();
+                            }
+                        }
+
+                        if (empty($documents)) {
+                            $this->deleteDirectory($temppath);
+                            return response()->json([
+                                'error' => 'The ZIP file contains no PDF documents. Only PDF documents are accepted.'
+                            ], 422);
+                        }
+
                         foreach ($documents as $docFile) {
                             $baseName = basename($docFile);
                             $baseName = trim($baseName);
