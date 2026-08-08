@@ -247,7 +247,11 @@ class AdminResultController extends Controller
         $sql = 'UPDATE temp_exam_results x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
         DB::update($sql);
 
-        $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON x.subject_code= y.code SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
+        $sql = 'UPDATE temp_exam_results x INNER JOIN student_academic_details z ON x.student_id = z.student_id INNER JOIN course_subjects y ON x.subject_code = y.code AND z.regulation_id = y.regulation_id SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
+        DB::update($sql);
+
+        // Fallback for subjects without regulation mismatch
+        $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON x.subject_code = y.code SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'" AND x.course_subject_id = 0';
         DB::update($sql);
 
 
