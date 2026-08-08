@@ -57,18 +57,12 @@ class AdminResultController extends Controller
             if (Auth::user()->hasRole('Admin')){ 
                 $subjectIds = CourseSubject::where('semester','>',0)->where('code','=',$request->subject)->orderBy('id')->pluck('id')->toArray();
             }elseif(Auth::user()->hasPermissionTo('course:teacher')){
-                $allowsSubjects = Auth::user()->subjects()->pluck('course_subjects.id')->toArray();
+                $allowsSubjects = Auth::user()->subjects()->pluck('course_subject_id')->toArray();
                 $subjectIds = CourseSubject::whereIn('id',$allowsSubjects)->where('code','=',$request->subject)->orderBy('id')->pluck('id')->toArray();
             }
 
             $data = [];
-            $col = [
-                0 => 'student_personal_details.id',
-                1 => 'RegistrationNo',
-                2 => DB::raw('CONCAT(initials," ",name_marking)'),
-                3 => 'Marks',
-                4 => 'Result'
-            ];
+            $col = [1=>'RegistrationNo',2=>'Name',3=>'Marks',4=>'Result'];
             //DB::enableQueryLog();
             $a = Student::join('student_exam_results','student_personal_details.id','=','student_exam_results.student_id')
                     ->join('course_subjects','student_exam_results.course_subject_id','=','course_subjects.id')
@@ -89,11 +83,8 @@ class AdminResultController extends Controller
             $data['recordsTotal']=    $Count;
             $data['recordsFiltered']= $Count;
 
-            $orderIndex = isset($request->order[0]['column']) ? $request->order[0]['column'] : 1;
-            $orderCol = isset($col[$orderIndex]) ? $col[$orderIndex] : 'RegistrationNo';
-            $orderDir = isset($request->order[0]['dir']) ? $request->order[0]['dir'] : 'asc';
 
-            $a->orderBy($orderCol, $orderDir);
+            $a->orderBy($col[$request->order[0]['column']],$request->order[0]['dir']);
             $a->offset($request->start)->limit($request->length);
             $applications = $a->get();                 
             
@@ -114,7 +105,7 @@ class AdminResultController extends Controller
         if (Auth::user()->hasRole('Admin')){ 
             $subjects = CourseSubject::where('semester','>',0)->where('status','=','1')->select('code as Code',DB::raw('CONCAT(code," ",name)  AS Name'))->orderBy('code')->get();
         }elseif(Auth::user()->hasPermissionTo('course:teacher')){
-            $allowsSubjects = Auth::user()->subjects()->pluck('course_subjects.id')->toArray();
+            $allowsSubjects = Auth::user()->subjects()->pluck('course_subject_id')->toArray();
             $subjects = CourseSubject::whereIn('id',$allowsSubjects)->where('status','=','1')->select('code as Code',DB::raw('CONCAT(code," ",name) AS Name'))->orderBy('code')->get();
         }
         return view('admin.results.import-results', ['subjects'=>$subjects]);
