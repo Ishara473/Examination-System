@@ -67,8 +67,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
-
+    'timezone' => 'Asia/Colombo',
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
