@@ -142,7 +142,7 @@ class AdminResultController extends Controller
                 $file_name = time().'_'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
                 
                 // Import from the temporary upload file first so validation can run even if storage is not writable.
-                Excel::import(new ResultsImport($userId), $file->getPathname());
+                Excel::import(new ResultsImport($userId), $file);
 
                 @copy($file->getPathname(), $path.$file_name);
                 SystemLog::create(['ip'=>$request->ip(),'user_id'=>$userId,'module'=>'Results','description'=>'Results file named <a href="'.url("/admin/settings/get-file").'?file=Results/Upload/'.$file_name.'">'.$file_name.'</a> for subject '.$request->subject.' was uploaded.']);
@@ -204,7 +204,7 @@ class AdminResultController extends Controller
             $file_name = time().'_'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
             
             // Import from the temporary upload file first so validation can run even if storage is not writable.
-            Excel::import(new ResultsImportBulk($userId, $request->year), $file->getPathname());
+            Excel::import(new ResultsImportBulk($userId, $request->year), $file);
 
             $importedRows = TempResultsImport::where('uploaded_by','=',$userId)->count();
             if($importedRows <= 0){
