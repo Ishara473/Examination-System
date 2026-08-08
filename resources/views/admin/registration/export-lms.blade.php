@@ -164,9 +164,10 @@ $(document).ready(function() {
         var year = $('#Year').val();
         var regulation = $('#Regulation').val();
         var checkedValues = $('input.SACheckBox:checked').map(function(){return $(this).val();}).get();
-
-        if(year !='' && regulation !='' && checkedValues != ''){
+        if(year !='' && regulation !='' && checkedValues.length > 0){
             window.open('/admin/registration/download-vle-export?year='+year+'&regulation='+regulation+'&studentIds='+checkedValues, '_blank');
+        } else {
+            alert('Please select a year, regulation and at least one student to download.');
         }
 
         

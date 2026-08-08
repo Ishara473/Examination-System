@@ -54,26 +54,71 @@ class AdminRegistrationController extends Controller
             $a = Student::join('student_yearly_registration','student_personal_details.id','=','student_yearly_registration.student_id')
                     ->join('student_academic_details','student_personal_details.id','=','student_academic_details.student_id') 
                     ->join('master_batch','student_academic_details.batch','=','master_batch.id')
-                    ->where('student_yearly_registration.registered_year','=',$request->studyyear)
-                    ->where('student_yearly_registration.academic_year','=',$request->accyear)                    
                     ->select(
                         'student_personal_details.id AS ID',
                         'student_personal_details.registration_no AS RegistrationNo',
                         'student_personal_details.id_no AS IDNo',
-                        DB::raw('CONCAT(initials," ",name_marking) AS Name'),
+                        DB::raw('CONCAT(student_personal_details.initials," ",student_personal_details.name_marking) AS Name'),
                         'master_batch.code AS Batch',
                         'student_yearly_registration.registered_year as StudyYear',
-                        'student_yearly_registration.academic_year as AcademicYear',
+                        'student_yearly_registration.academic_year as AcademicYear'
                     );
 
+            if(!empty($request->studyyear)){
+                $a->where('student_yearly_registration.registered_year','=',$request->studyyear);
+            }
+
+            if(!empty($request->accyear)){
+                $a->where('student_yearly_registration.academic_year','=',$request->accyear);
+            }
+
+            // ensure unique students when joining multiple related tables
+            // group by all non-aggregated selected columns to satisfy ONLY_FULL_GROUP_BY
+            $a->groupBy([
+                'student_personal_details.id',
+                'student_personal_details.registration_no',
+                'student_personal_details.id_no',
+                'student_personal_details.initials',
+                'student_personal_details.name_marking',
+                'master_batch.code',
+                'student_yearly_registration.registered_year',
+                'student_yearly_registration.academic_year'
+            ]);
             $ac = clone $a;
             $Count = $ac->count();
 
             $data['recordsTotal']=    $Count;
             $data['recordsFiltered']= $Count;
 
+            $orderColIndex = isset($request->order[0]['column'])? intval($request->order[0]['column']) : 1;
+            $orderDir = isset($request->order[0]['dir'])? $request->order[0]['dir'] : 'asc';
 
-            $a->orderBy($col[$request->order[0]['column']],$request->order[0]['dir']);
+            switch($orderColIndex){
+                case 0:
+                    $a->orderBy('student_personal_details.id',$orderDir);
+                    break;
+                case 1:
+                    $a->orderBy('student_personal_details.registration_no',$orderDir);
+                    break;
+                case 2:
+                    $a->orderBy(DB::raw('CONCAT(student_personal_details.initials," ",student_personal_details.name_marking)') , $orderDir);
+                    break;
+                case 3:
+                    $a->orderBy('master_batch.code',$orderDir);
+                    break;
+                case 4:
+                    $a->orderBy('student_personal_details.id_no',$orderDir);
+                    break;
+                case 5:
+                    $a->orderBy('student_yearly_registration.academic_year',$orderDir);
+                    break;
+                case 6:
+                    $a->orderBy('student_yearly_registration.registered_year',$orderDir);
+                    break;
+                default:
+                    $a->orderBy('student_personal_details.registration_no',$orderDir);
+            }
+
             $a->offset($request->start)->limit($request->length);
             $applications = $a->get();                 
             
@@ -107,14 +152,27 @@ class AdminRegistrationController extends Controller
             $file = $request->file('list');        
             $file_name = str_replace(' ', '-', strtolower($file->getClientOriginalName()));
             
-            //uplaod the record
+            // upload the record
             if($file->move($path, $file_name)){
                 Excel::import(new YearRegistrationImport(), $path.$file_name);
+            }
+
+            // ensure import produced rows
+            $tempCount = DB::table('temp_year_registration_upload')->count();
+            if($tempCount == 0){
+                return response()->json(['errors'=>['list'=>'Uploaded file contained no valid rows or had an invalid format.']]);
             }
             $today = Carbon::now()->format('Y-m-d');
             
             $sql = 'UPDATE temp_year_registration_upload X INNER JOIN student_personal_details Y ON X.registration_no = Y.registration_no SET X.student_id = Y.id';
             DB::update($sql);
+
+            // detect registrations that did not map to any student
+            $missing = DB::table('temp_year_registration_upload')->where('student_id',0)->pluck('registration_no')->toArray();
+            if(count($missing) > 0){
+                $sample = implode(',',array_slice($missing,0,10));
+                return response()->json(['errors'=>['list'=>'The following registration numbers were not found: '.$sample]]);
+            }
 
             $sql = 'delete y FROM temp_year_registration_upload x inner join temp_year_registration_upload y on x.student_id=y.student_id and x.year =y.year and x.study_year=y.study_year WHERE x.id < y.id ';
             DB::delete($sql);
@@ -300,16 +358,35 @@ class AdminRegistrationController extends Controller
             $file = $request->file('list');        
             $file_name = str_replace(' ', '-', strtolower($file->getClientOriginalName()));
             
-            //uplaod the record
+            // upload the record
             if($file->move($path, $file_name)){
                 Excel::import(new SpecializationImport(), $path.$file_name);
             };
+
+            // ensure import produced rows
+            $tempCount = DB::table('temp_specialization_upload')->count();
+            if($tempCount == 0){
+                return response()->json(['errors'=>['list'=>'Uploaded file contained no valid rows or had an invalid format.']]);
+            }
 
             $sql = 'UPDATE temp_specialization_upload x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id';
             DB::update($sql);
 
             $sql = 'UPDATE temp_specialization_upload x INNER JOIN master_course_specialization_categories y ON x.specialization= y.name SET x.specialization_id = y.id';
             DB::update($sql);
+
+            // detect unmapped registrations or specializations
+            $missingStudents = DB::table('temp_specialization_upload')->where('student_id',0)->pluck('registration_no')->toArray();
+            if(count($missingStudents) > 0){
+                $sample = implode(',',array_slice($missingStudents,0,10));
+                return response()->json(['errors'=>['list'=>'The following registration numbers were not found: '.$sample]]);
+            }
+
+            $missingSpecs = DB::table('temp_specialization_upload')->whereNull('specialization_id')->orWhere('specialization_id',0)->pluck('specialization')->toArray();
+            if(count($missingSpecs) > 0){
+                $sample = implode(',',array_slice($missingSpecs,0,10));
+                return response()->json(['errors'=>['list'=>'The following specializations were not recognized: '.$sample]]);
+            }
 
             $sql = 'UPDATE temp_specialization_upload x INNER JOIN student_academic_details y ON x.student_id= y.student_id SET y.specialization_id = x.specialization_id';
             DB::update($sql);
@@ -365,7 +442,10 @@ class AdminRegistrationController extends Controller
             $data['recordsTotal']=    $Count;
             $data['recordsFiltered']= $Count;
 
-            $applications  = $a->orderBy($col[$request->order[0]['column']],$request->order[0]['dir'])->get();
+            $orderColIndex = isset($request->order[0]['column'])? intval($request->order[0]['column']) : 2;
+            $orderDir = isset($request->order[0]['dir'])? $request->order[0]['dir'] : 'asc';
+            $orderBy = isset($col[$orderColIndex])? $col[$orderColIndex] : 'RegistrationNo';
+            $applications  = $a->orderBy($orderBy,$orderDir)->get();
             
             $data['data']=$applications;
             return response()->json($data);

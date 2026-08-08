@@ -10,6 +10,7 @@ use App\TempStudentImport;
 
 use Carbon\Carbon;
 use Log;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class StudentImport implements ToCollection,  WithMultipleSheets
 {
@@ -21,6 +22,27 @@ class StudentImport implements ToCollection,  WithMultipleSheets
     {
         $this->batch = $batch;
         $this->regulation_id = $regulation_id;
+    }
+
+    private function parseRegistrationDate($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            try {
+                return ExcelDate::excelToDateTimeObject($value)->format('Y-m-d');
+            } catch (\Exception $ex) {
+                // fallback to text parse below
+            }
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Exception $ex) {
+            return null;
+        }
     }
 
     public function sheets(): array
@@ -36,38 +58,42 @@ class StudentImport implements ToCollection,  WithMultipleSheets
     public function collection(Collection $rows)
     {
         unset($rows[0]);
-        try{
-            foreach ($rows as $key=>$row){
-                $registration_no = strtoupper(trim($row[0]));
-                if($registration_no!=''){
-                    $data = TempStudentImport::create([
-                                    'registration_no' => $registration_no,
-                                    'status' => $row[1],
-                                    'registration_date' => ($row[2] - 25569) * 86400,
-                                    'nic' => strtoupper(trim($row[3])),
-                                    'full_name' => ucwords(strtolower(trim($row[4]))),
-                                    'title' => $row[5],
-                                    'name_marking' => ucwords(strtolower(trim($row[6]))),
-                                    'initials' => strtoupper(trim($row[7])),
-                                    'gender' => $row[8],
-                                    'address1' => $row[9],
-                                    'address2' => $row[10],
-                                    'address3' => $row[11],
-                                    'district' => $row[12],
-                                    'medium' => $row[13],
-                                    'mobile' => $row[14],
-                                    'phone1' => $row[15],
-                                    'phone2' => $row[16],
-                                    'email' => strtolower(trim($row[17])),
-                                    'al_index_no' => $row[18],
-                                    'zscore' => $row[19],
-                                    'batch' => $this->batch,
-                                    'regulation_id'=>$this->regulation_id]
-                                );
-                }
+
+        foreach ($rows as $key => $row) {
+            $registration_no = strtoupper(trim($row[0] ?? ''));
+            if ($registration_no === '') {
+                continue;
             }
-        }catch(\Exception $ex){
-            Log::notice($ex->getMessage());
+
+            try {
+                TempStudentImport::create([
+                    'registration_no' => $registration_no,
+                    'status' => $row[1] ?? null,
+                    'registration_date' => $this->parseRegistrationDate($row[2] ?? null),
+                    'nic' => strtoupper(trim($row[3] ?? '')),
+                    'full_name' => ucwords(strtolower(trim($row[4] ?? ''))),
+                    'title' => $row[5] ?? null,
+                    'name_marking' => ucwords(strtolower(trim($row[6] ?? ''))),
+                    'initials' => strtoupper(trim($row[7] ?? '')),
+                    'gender' => $row[8] ?? null,
+                    'address1' => $row[9] ?? null,
+                    'address2' => $row[10] ?? null,
+                    'address3' => $row[11] ?? null,
+                    'district' => $row[12] ?? null,
+                    'medium' => $row[13] ?? null,
+                    'mobile' => $row[14] ?? null,
+                    'phone1' => $row[15] ?? null,
+                    'phone2' => $row[16] ?? null,
+                    'email' => strtolower(trim($row[17] ?? '')),
+                    'al_index_no' => $row[18] ?? null,
+                    'zscore' => $row[19] ?? null,
+                    'batch' => $this->batch,
+                    'regulation_id' => $this->regulation_id,
+                ]);
+            } catch (\Exception $ex) {
+                Log::notice('StudentImport failed on row '.$key.': '.$ex->getMessage());
+                continue;
+            }
         }
     }
 }

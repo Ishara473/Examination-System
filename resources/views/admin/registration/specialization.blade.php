@@ -192,6 +192,10 @@ $(document).ready(function() {
 
     $('#frmUpload').on('submit',function(e){
         e.preventDefault();
+        if($('#list').val() == ''){
+            Swal.fire({icon:'error',title:'No file selected',text:'Please choose a file to upload.'});
+            return;
+        }
 
         Swal.fire({
             title: 'Confirm Upload?',
@@ -211,7 +215,7 @@ $(document).ready(function() {
                     processData: false,
                     contentType: false,
                     success:function(data, textStatus, jqXHR){
-                        if(data==1){
+                        if(data == 1){
                             Swal.fire({
                                 position: 'top-end',
                                 icon: 'success',
@@ -221,6 +225,12 @@ $(document).ready(function() {
                                 width: 250,
                                 toast:true,
                             });
+                        } else if(data && data.errors){
+                            var msg = '';
+                            if(typeof data.errors === 'string') msg = data.errors;
+                            else if(data.errors.list) msg = data.errors.list;
+                            else msg = JSON.stringify(data.errors);
+                            Swal.fire({icon:'error',title:'Upload failed',text:msg});
                         }
                     },
                     error: function(jqXHR, textStatus, errorThrown){

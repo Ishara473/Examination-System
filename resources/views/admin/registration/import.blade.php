@@ -97,6 +97,11 @@ $(document).ready(function() {
 
     $('#frmUpload').on('submit',function(e){
         e.preventDefault();
+        if($('#list').val() == ''){
+            Swal.fire({icon:'error',title:'No file selected',text:'Please choose a file to upload.'});
+            return;
+        }
+
         var formData = new FormData(this);
 
         $.ajax({
@@ -106,7 +111,7 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success:function(data, textStatus, jqXHR){
-                if(data==1){
+                if(data == 1){
                     Swal.fire({
                         position: 'top-end',
                         icon: 'success',
@@ -118,11 +123,16 @@ $(document).ready(function() {
                     });
                     $('#list_label').html('Choose file');
                     $('#list').val('');
-
+                } else if(data && data.errors){
+                    var msg = '';
+                    if(typeof data.errors === 'string') msg = data.errors;
+                    else if(data.errors.list) msg = data.errors.list;
+                    else msg = JSON.stringify(data.errors);
+                    Swal.fire({icon:'error',title:'Upload failed',text:msg});
                 }
             },
             error: function(jqXHR, textStatus, errorThrown){
-                //if fails     
+                Swal.fire({icon:'error',title:'Upload error',text:'An unexpected error occurred.'});
             }
         });
     });

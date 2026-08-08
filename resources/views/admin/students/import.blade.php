@@ -240,6 +240,22 @@ $(document).ready(function() {
                         text: 'No records were processed. Check that status is "Enrolled" and records do not already exist.',
                     });
                 }
+            },
+            error: function(jqXHR, textStatus, errorThrown){
+                $('#btnProcess').removeClass('disabled').removeProp('disabled');
+                var msg = 'An unexpected error occurred.';
+                if(jqXHR.responseJSON && jqXHR.responseJSON.error){
+                    msg = jqXHR.responseJSON.error;
+                }else if(jqXHR.status == 500){
+                    msg = 'Server error. Please check your file data and try again.';
+                }else if(jqXHR.status == 419){
+                    msg = 'Session expired. Please refresh the page.';
+                }
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Processing Failed',
+                    text: msg,
+                });
             }
         });
     });
