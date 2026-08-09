@@ -369,7 +369,7 @@ class AdminResultController extends Controller
 
             $search = trim($request->search);
             $regulation = trim($request->regulation);
-            if(!empty($search) || !empty($request->year)){
+            if(!empty($search) || !empty($request->year) || !empty($regulation)){
                 $a = Student::join('student_academic_details','student_personal_details.id','=','student_academic_details.student_id')
                 ->join('master_batch','student_academic_details.batch','=','master_batch.id')
                 ->where('regulation_id','=',$regulation)
