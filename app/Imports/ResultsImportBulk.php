@@ -52,7 +52,25 @@ class ResultsImportBulk implements ToCollection
                         $result = strtoupper(trim($row[(4 + (($key-1)*4))] ?? ''));
 
                         if(($mark !== 0 && empty($mark)) || $result == '') continue;
-                        else $mark = is_numeric($mark)?$mark:0;
+                        
+                        // Validate marks range (0-100)
+                        if(is_numeric($mark)){
+                            $floatMark = floatval($mark);
+                            if($floatMark < 0 || $floatMark > 100){
+                                Log::notice("Bulk Import: Invalid marks {$mark} for registration {$registration_no}");
+                                continue;
+                            }
+                            $mark = $floatMark;
+                        } else {
+                            $mark = 0;
+                        }
+
+                        // Validate grade format
+                        $validGrades = ['A', 'A+', 'A-', 'B', 'B+', 'B-', 'C', 'C+', 'C-', 'D', 'D+', 'E', 'F', 'AB', 'MCA', 'NE'];
+                        if(!in_array($result, $validGrades)){
+                            Log::notice("Bulk Import: Invalid grade {$result} for registration {$registration_no}");
+                            continue;
+                        }
 
                         $data = TempResultsImport::create([
                             'registration_no' => $registration_no,
