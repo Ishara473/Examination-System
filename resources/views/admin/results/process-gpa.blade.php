@@ -122,7 +122,7 @@ $(document).ready(function() {
         "responsive": true,
         "processing": true,
         "serverSide": true,
-    // "deferLoading": 0,
+        "deferLoading": 0,
         "ajax": {
                 "url": "{{url("/admin/results/process-gpa")}}?type=json",
                 "data" : function ( d ) {
