@@ -105,8 +105,8 @@ Process GPA
 @section('custom-js')
 <script src="{{ asset('plugins/datatables/datatables.min.js') }}"></script>
 <script>
-$(document).ready(function() {
-    
+    $('#ProcessingRegulation').val($('#Regulation').val());
+
     $('#BtnFilterSubmit').on('click',function(e){
         e.preventDefault();
         $('#ProcessingRegulation').val($('#Regulation').val());
@@ -166,7 +166,7 @@ $(document).ready(function() {
     $('#BtnDownload').on('click',function(e){
         e.preventDefault();
         var semester = parseInt($('#ProcessingSemester').val());
-        var regulation = parseInt($('#ProcessingRegulation').val());
+        var regulation = parseInt($('#ProcessingRegulation').val()) || parseInt($('#Regulation').val());
         var students = $(".SACheckBox:checked").map(function(){return $(this).val();}).get();
         if(students.length > 0) window.location = "{{url('/admin/results/download-raw-gpa')}}?students="+students+"&semester="+semester+"&regulation="+regulation;
     });
