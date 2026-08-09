@@ -261,7 +261,7 @@ class AdminResultController extends Controller
         
         if(empty($invalidResutls)){
             if($request->update == 1){
-                $sql = 'UPDATE temp_exam_results x INNER JOIN student_exam_results y ON x.student_id = y.student_id AND x.year = y.year AND x.course_subject_id = y.course_subject_id SET y.marks = x.marks, y.result = x.result, status=0 WHERE x.uploaded_by = "'.$userId.'"';
+                $sql = 'UPDATE student_exam_results y INNER JOIN (SELECT student_id, year, course_subject_id, MAX(marks) AS marks, MIN(result) AS result FROM temp_exam_results WHERE uploaded_by = "'.$userId.'" GROUP BY student_id, year, course_subject_id) x ON x.student_id = y.student_id AND x.year = y.year AND x.course_subject_id = y.course_subject_id SET y.marks = x.marks, y.result = x.result, y.status = 0';
                 DB::update($sql);
     
                 SystemLog::create(['ip'=>$request->ip(),'user_id'=>$userId,'module'=>'Results','description'=>'Existing exam results for subject '.$request->processingSubject.' was updated']);
@@ -323,7 +323,7 @@ class AdminResultController extends Controller
         }
 
         if($request->update == 1){
-            $sql = 'UPDATE temp_exam_results x INNER JOIN student_exam_results y ON x.student_id = y.student_id AND x.year = y.year AND x.course_subject_id = y.course_subject_id SET y.marks = x.marks, y.result = x.result, status=0 WHERE x.uploaded_by = "'.$userId.'"';
+            $sql = 'UPDATE student_exam_results y INNER JOIN (SELECT student_id, year, course_subject_id, MAX(marks) AS marks, MIN(result) AS result FROM temp_exam_results WHERE uploaded_by = "'.$userId.'" GROUP BY student_id, year, course_subject_id) x ON x.student_id = y.student_id AND x.year = y.year AND x.course_subject_id = y.course_subject_id SET y.marks = x.marks, y.result = x.result, y.status = 0';
             DB::update($sql);
 
             SystemLog::create(['ip'=>$request->ip(),'user_id'=>$userId,'module'=>'Results','description'=>'Existing exam results were updated during bulk import']);
