@@ -306,22 +306,24 @@ class AdminResultController extends Controller
         $sql = 'UPDATE temp_exam_results x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
         DB::update($sql);
 
-        $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON x.subject_code= y.code SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
+        $sql = 'UPDATE temp_exam_results x INNER JOIN student_academic_details z ON x.student_id = z.student_id INNER JOIN course_subjects y ON x.subject_code = y.code AND z.regulation_id = y.regulation_id SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
         DB::update($sql);
 
-        // if($request->update == 1){
-        //     $sql = 'UPDATE temp_exam_results x INNER JOIN student_exam_results y ON x.student_id = y.student_id AND x.year = y.year AND x.course_subject_id = y.course_subject_id SET y.marks = x.marks, y.result = x.result, status=0 WHERE x.uploaded_by = "'.$userId.'" AND y.marks <= x.marks';
-        //     DB::update($sql);
+        // Fallback for subjects without regulation mismatch
+        $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON x.subject_code = y.code SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'" AND x.course_subject_id = 0';
+        DB::update($sql);
 
-        //     SystemLog::create(['ip'=>$request->ip(),'user_id'=>$userId,'module'=>'Results','description'=>'Existing exam results for subject '.$request->processingSubject.' was updated']);
+        if($request->update == 1){
+            $sql = 'UPDATE temp_exam_results x INNER JOIN student_exam_results y ON x.student_id = y.student_id AND x.year = y.year AND x.course_subject_id = y.course_subject_id SET y.marks = x.marks, y.result = x.result, status=0 WHERE x.uploaded_by = "'.$userId.'"';
+            DB::update($sql);
 
-        // }
+            SystemLog::create(['ip'=>$request->ip(),'user_id'=>$userId,'module'=>'Results','description'=>'Existing exam results were updated during bulk import']);
+        }
 
-        $sql = 'DELETE x FROM temp_exam_results x INNER JOIN student_exam_results y ON x.student_id = y.student_id AND x.year = y.year  AND x.course_subject_id = y.course_subject_id WHERE x.uploaded_by = "'.$userId.'"';
+        $sql = 'DELETE x FROM temp_exam_results x INNER JOIN student_exam_results y ON x.student_id = y.student_id AND x.year = y.year AND x.course_subject_id = y.course_subject_id WHERE x.uploaded_by = "'.$userId.'"';
         DB::delete($sql);
 
-
-        $sql = 'INSERT INTO student_exam_results(student_id, year, course_subject_id, marks, result) SELECT student_id, year, course_subject_id, MAX(marks) AS marks, MIN(result) AS result FROM  temp_exam_results WHERE uploaded_by = "'.$userId.'" GROUP BY student_id, year, course_subject_id';
+        $sql = 'INSERT INTO student_exam_results(student_id, year, course_subject_id, marks, result) SELECT student_id, year, course_subject_id, MAX(marks) AS marks, MIN(result) AS result FROM temp_exam_results WHERE uploaded_by = "'.$userId.'" GROUP BY student_id, year, course_subject_id';
         DB::insert($sql);
 
         SystemLog::create(['ip'=>$request->ip(),'user_id'=>$userId,'module'=>'Results','description'=>'New results for subject '.$request->processingSubject.' was uploaded']);
