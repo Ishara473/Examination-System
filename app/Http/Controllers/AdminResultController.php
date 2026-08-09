@@ -427,7 +427,7 @@ class AdminResultController extends Controller
             
             \Log::info('download_raw_gpa_file - Parameters', ['semester' => $semester, 'regulation' => $regulation, 'studentIds' => $studentIds]);
             
-            if (empty($semester) || !is_numeric($semester)) {
+            if (!isset($semester) || !is_numeric($semester)) {
                 return back()->with('error', 'Invalid semester parameter');
             }
             
