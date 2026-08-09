@@ -313,6 +313,15 @@ class AdminResultController extends Controller
         $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON x.subject_code = y.code SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'" AND x.course_subject_id = 0';
         DB::update($sql);
 
+        $invalidResults = TempResultsImport::where('uploaded_by','=',$userId)->where(function ($query) {
+            $query->where('student_id', '=', 0)->orWhere('course_subject_id','=',0);
+        })->first();
+
+        if(!empty($invalidResults)){
+            TempResultsImport::where('uploaded_by','=',$userId)->delete();
+            return response()->json(['status'=>-1,'msg'=>'Invalid students/subject code were detected.']);
+        }
+
         if($request->update == 1){
             $sql = 'UPDATE temp_exam_results x INNER JOIN student_exam_results y ON x.student_id = y.student_id AND x.year = y.year AND x.course_subject_id = y.course_subject_id SET y.marks = x.marks, y.result = x.result, status=0 WHERE x.uploaded_by = "'.$userId.'"';
             DB::update($sql);
