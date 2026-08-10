@@ -69,7 +69,6 @@ class AdminExamController extends Controller
             $subjectAppliedApps = StudentExam::join('student_exam_subjects','student_exam.id','=','student_exam_subjects.student_exam_id')
                                     ->where('student_exam.year','=',$this->year)
                                     ->where('student_exam.semester','=',$request->semester)
-                                    ->where('student_exam_subjects.registered','=','1')
                                     ->groupBy('student_exam_subjects.student_exam_id')
                                     ->orderBy('student_exam_subjects.student_exam_id')
                                     ->pluck('student_exam_subjects.student_exam_id')
