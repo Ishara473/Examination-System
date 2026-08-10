@@ -66,6 +66,9 @@ class AdminExamController extends Controller
 
             $col = [2=>'RegistrationNo',3=>'Name',4=>'Batch',5=>'IDNo'];
 
+            $rawSearchInput = $request->input('search');
+            $searchValue = is_array($rawSearchInput) ? trim($rawSearchInput['value'] ?? '') : trim($rawSearchInput ?? '');
+
             $subjectAppliedApps = StudentExam::join('student_exam_subjects','student_exam.id','=','student_exam_subjects.student_exam_id')
                                     ->where('student_exam.year','=',$this->year)
                                     ->where('student_exam.semester','=',$request->semester)
@@ -108,6 +111,7 @@ class AdminExamController extends Controller
 
             $a->orderBy($col[$request->order[0]['column']],$request->order[0]['dir']);
             $a->offset($request->start)->limit($request->length);
+
             $applications = $a->get();                 
             
             

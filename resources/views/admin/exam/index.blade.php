@@ -91,7 +91,7 @@ $(document).ready(function() {
         "ajax": {
                 "url": "/admin/exam/list",
                 "data" : function ( d ) {
-                    d.search = $('#Search').val();
+                    d.search = { value: $('#Search').val(), regex: false };
                     d.semester = $('#Semester').val();
                 },
         },
