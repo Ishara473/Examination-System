@@ -85,9 +85,9 @@ class AdminExamController extends Controller
                             DB::raw('CONCAT(initials," ",name_marking) AS Name'),
                         'master_batch.code AS Batch');
 
-
-            if(!empty($request->search)){
-                $search = $request->search.'%';
+            $searchValue = trim($request->input('search') ?? $request->input('search.value') ?? '');
+            if(!empty($searchValue)){
+                $search = $searchValue.'%';
                 $a->where(function($query) use($search){
                     return $query->where('registration_no','like',$search)->orWhere('id_no','like',$search);
                 });
