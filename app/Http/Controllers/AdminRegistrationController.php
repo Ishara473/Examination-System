@@ -152,10 +152,9 @@ class AdminRegistrationController extends Controller
             $file = $request->file('list');        
             $file_name = str_replace(' ', '-', strtolower($file->getClientOriginalName()));
             
-            // upload the record
-            if($file->move($path, $file_name)){
-                Excel::import(new YearRegistrationImport(), $path.$file_name);
-            }
+            // Import from the temporary upload file first
+            Excel::import(new YearRegistrationImport(), $file);
+            $file->move($path, $file_name);
 
             // ensure import produced rows
             $tempCount = DB::table('temp_year_registration_upload')->count();
@@ -358,10 +357,9 @@ class AdminRegistrationController extends Controller
             $file = $request->file('list');        
             $file_name = str_replace(' ', '-', strtolower($file->getClientOriginalName()));
             
-            // upload the record
-            if($file->move($path, $file_name)){
-                Excel::import(new SpecializationImport(), $path.$file_name);
-            };
+            // Import from the temporary upload file first
+            Excel::import(new SpecializationImport(), $file);
+            $file->move($path, $file_name);
 
             // ensure import produced rows
             $tempCount = DB::table('temp_specialization_upload')->count();
