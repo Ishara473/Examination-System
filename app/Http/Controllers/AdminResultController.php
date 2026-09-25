@@ -537,10 +537,11 @@ class AdminResultController extends Controller
                 $file = $request->file('list');        
                 $file_name = str_replace(' ', '-', strtolower($file->getClientOriginalName()));
                 
-                //uplaod the record
-                if($file->move($path, $file_name)){
-                    Excel::import(new GPAImport(), $path.$file_name);
-                };
+                // Import from the temporary upload file first
+                Excel::import(new GPAImport(), $file);
+                
+                // Move the file to storage
+                $file->move($path, $file_name);
 
                 $sql = 'UPDATE temp_gpa_upload x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id';
                 DB::update($sql);
