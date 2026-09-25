@@ -440,10 +440,9 @@ class AdminStudentController extends Controller{
                 $file = $request->file('student_list');        
                 $file_name = str_replace(' ', '-', strtolower($file->getClientOriginalName()));
     
-                if($file->move($path, $file_name)){
-                    Excel::import(new StudentImport($request->batch,$request->regulation), $path.$file_name);
-                    return 1;
-                }
+                Excel::import(new StudentImport($request->batch,$request->regulation), $file);
+                $file->move($path, $file_name);
+                return 1;
             }
         }            
         return response()->json(['errors'=>'Oops! something when wrong. Refresh the page and try to upload again.']);     
@@ -719,10 +718,9 @@ class AdminStudentController extends Controller{
             $file = $request->file('student_list');        
             $file_name = time().'-'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
 
-            if($file->move($path, $file_name)){
-                Excel::import(new TranferImport(), $path.$file_name);
-                return 1;
-            }
+            Excel::import(new TranferImport(), $file);
+            $file->move($path, $file_name);
+            return 1;
         }            
         return response()->json(['errors'=>'Oops! something when wrong. Refresh the page and try to upload again.']); 
     }
@@ -957,10 +955,9 @@ class AdminStudentController extends Controller{
         $file = $request->file('student_list');        
         $file_name = time().'-'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
 
-        if($file->move($path, $file_name)){
-            Excel::import(new GraduateImport(), $path.$file_name);
-            return response()->json(['success' => true], 200);
-        }
+        Excel::import(new GraduateImport(), $file);
+        $file->move($path, $file_name);
+        return response()->json(['success' => true], 200);
 
         return response()->json(['errors'=>'Oops! Something went wrong. Refresh the page and try again.'], 500); 
     }
@@ -1124,12 +1121,12 @@ class AdminStudentController extends Controller{
         $file = $request->file('student_list');        
         $file_name = time().'-'.str_replace(' ', '-', strtolower($file->getClientOriginalName()));
 
-        if($file->move($path, $file_name)){
-            try {
-                Excel::import(new ScholarshipImport($request->type), $path.$file_name);
-            } catch (\Exception $e) {
-                return response()->json(['error' => $e->getMessage()], 422);
-            }
+        try {
+            Excel::import(new ScholarshipImport($request->type), $file);
+            $file->move($path, $file_name);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
 
             $sql = 'UPDATE temp_scholarship_upload x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id';
             DB::update($sql);
