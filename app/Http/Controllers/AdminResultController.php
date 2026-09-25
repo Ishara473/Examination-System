@@ -55,10 +55,12 @@ class AdminResultController extends Controller
         }else{
             $subjectIds=[];
             if (Auth::user()->hasRole('Admin')){ 
-                $subjectIds = CourseSubject::where('semester','>',0)->where('code','=',$request->subject)->orderBy('id')->pluck('id')->toArray();
+                $cleanSub = str_replace(' ', '', strtoupper($request->subject));
+                $subjectIds = CourseSubject::where('semester','>',0)->whereRaw("REPLACE(UPPER(code), ' ', '') = ?", [$cleanSub])->orderBy('id')->pluck('id')->toArray();
             }elseif(Auth::user()->hasPermissionTo('course:teacher')){
+                $cleanSub = str_replace(' ', '', strtoupper($request->subject));
                 $allowsSubjects = Auth::user()->subjects()->pluck('course_subjects.id')->toArray();
-                $subjectIds = CourseSubject::whereIn('id',$allowsSubjects)->where('code','=',$request->subject)->orderBy('id')->pluck('id')->toArray();
+                $subjectIds = CourseSubject::whereIn('id',$allowsSubjects)->whereRaw("REPLACE(UPPER(code), ' ', '') = ?", [$cleanSub])->orderBy('id')->pluck('id')->toArray();
             }
 
             $data = [];
@@ -154,17 +156,23 @@ class AdminResultController extends Controller
                 }
 
                 $uploadedSubject = $processingSubs[0]->subject_code;
-                $subjectExists = CourseSubject::where('code','=',$uploadedSubject)->exists();
+                $cleanUploaded = str_replace(' ', '', strtoupper($uploadedSubject));
+                $cleanRequest = str_replace(' ', '', strtoupper($request->subject));
 
-                if(!$subjectExists){
+                $subjectRecord = CourseSubject::whereRaw("REPLACE(UPPER(code), ' ', '') = ?", [$cleanUploaded])->first();
+
+                if(!$subjectRecord){
                     TempResultsImport::where('uploaded_by','=',$userId)->delete();
                     return response()->json(['status'=>-1,'msg'=>'Invalid students/subject code were detected.']);
                 }
 
-                if($uploadedSubject != $request->subject){
+                if($cleanUploaded != $cleanRequest){
                     TempResultsImport::where('uploaded_by','=',$userId)->delete();
                     return response()->json(['status'=>-2,'msg'=>'Subject code didn\'t match']);
                 }
+
+                // Normalize subject_code in temp table to match official course_subjects code
+                TempResultsImport::where('uploaded_by', '=', $userId)->update(['subject_code' => $subjectRecord->code]);
                 return response()->json(['status'=>1,'msg'=>'Successfuly Uploaded']);
             } catch (\Exception $e) {
                 \Log::error('Upload error: ' . $e->getMessage());
@@ -247,11 +255,11 @@ class AdminResultController extends Controller
         $sql = 'UPDATE temp_exam_results x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
         DB::update($sql);
 
-        $sql = 'UPDATE temp_exam_results x INNER JOIN student_academic_details z ON x.student_id = z.student_id INNER JOIN course_subjects y ON x.subject_code = y.code AND z.regulation_id = y.regulation_id SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
+        $sql = 'UPDATE temp_exam_results x INNER JOIN student_academic_details z ON x.student_id = z.student_id INNER JOIN course_subjects y ON REPLACE(x.subject_code, " ", "") = REPLACE(y.code, " ", "") AND z.regulation_id = y.regulation_id SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
         DB::update($sql);
 
         // Fallback for subjects without regulation mismatch
-        $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON x.subject_code = y.code SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'" AND x.course_subject_id = 0';
+        $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON REPLACE(x.subject_code, " ", "") = REPLACE(y.code, " ", "") SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'" AND x.course_subject_id = 0';
         DB::update($sql);
 
 
@@ -306,11 +314,11 @@ class AdminResultController extends Controller
         $sql = 'UPDATE temp_exam_results x INNER JOIN student_personal_details y ON x.registration_no= y.registration_no SET x.student_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
         DB::update($sql);
 
-        $sql = 'UPDATE temp_exam_results x INNER JOIN student_academic_details z ON x.student_id = z.student_id INNER JOIN course_subjects y ON x.subject_code = y.code AND z.regulation_id = y.regulation_id SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
+        $sql = 'UPDATE temp_exam_results x INNER JOIN student_academic_details z ON x.student_id = z.student_id INNER JOIN course_subjects y ON REPLACE(x.subject_code, " ", "") = REPLACE(y.code, " ", "") AND z.regulation_id = y.regulation_id SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'"';
         DB::update($sql);
 
         // Fallback for subjects without regulation mismatch
-        $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON x.subject_code = y.code SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'" AND x.course_subject_id = 0';
+        $sql = 'UPDATE temp_exam_results x INNER JOIN course_subjects y ON REPLACE(x.subject_code, " ", "") = REPLACE(y.code, " ", "") SET x.course_subject_id = y.id WHERE x.uploaded_by = "'.$userId.'" AND x.course_subject_id = 0';
         DB::update($sql);
 
         $invalidResults = TempResultsImport::where('uploaded_by','=',$userId)->where(function ($query) {
