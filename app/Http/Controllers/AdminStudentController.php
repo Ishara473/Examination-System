@@ -1140,8 +1140,5 @@ class AdminStudentController extends Controller{
             DB::update('UPDATE temp_scholarship_upload x INNER JOIN student_academic_details y on x.student_id = y.student_id SET y.scholarship_start_date = x.awarded_date, y.main_scholarship = x.scholarship_type');
 
             return response()->json(['success' => true, 'updated' => $matchedCount], 200);
-        }
-
-        return response()->json(['errors' => 'Oops! Something went wrong. Refresh the page and try again.'], 500); 
     }
 }
