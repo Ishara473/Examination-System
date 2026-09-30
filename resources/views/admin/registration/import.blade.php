@@ -26,11 +26,27 @@ Import Yearly Registration
                 <hr class="mb-1 mt-0 border-info"/>        
                 <div class="row">            
                     <div class="col-md-12">
-                        <p class="mb-0">
-                            Upload a <strong>Excel</strong> file with the fields in the given order as shown below.<br/>
-                        </p>
-                        <p class="ml-3">[Registration Number],[Acc Year (Ex: 2020)],[New Study Year(Ex: 1,2,3,4)], [Paid Amount], [Need Hostel (Y|N)]</p>
+                        <p class="mb-2"><strong>File Format:</strong></p>
+                        <p class="ml-3">Upload an Excel file with a header row and data rows in the following column order:</p>
+                        <p class="ml-3 mb-2"><code>registration_no, year, study_year, paid_amount, hostel</code></p>
                         
+                        <p class="mb-1"><strong>Header Row Example:</strong></p>
+                        <p class="ml-3 mb-2"><code>registration_no | year | study_year | paid_amount | hostel</code></p>
+                        
+                        <p class="mb-1"><strong>Data Row Example:</strong></p>
+                        <p class="ml-3 mb-2"><code>AG/2020/002 | 2022 | 1 | 25000 | Y</code></p>
+                        
+                        <p class="mb-1"><strong>Important Notes:</strong></p>
+                        <ul class="ml-3 mb-0">
+                            <li>First row must contain column headers exactly as shown above</li>
+                            <li>Columns must be in the order shown (registration_no first, hostel last)</li>
+                            <li><strong>All columns are required:</strong> Every data row must have values for all 5 columns</li>
+                            <li>registration_no: Student registration number (e.g., AG/2020/002)</li>
+                            <li>year: Academic year as 4-digit number (e.g., 2022)</li>
+                            <li>study_year: Study year as number (e.g., 1, 2, 3, or 4)</li>
+                            <li>paid_amount: Amount paid as number (e.g., 25000)</li>
+                            <li>hostel: Must be exactly 'Y' (yes) or 'N' (no) - no empty cells allowed</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -102,6 +118,12 @@ $(document).ready(function() {
             return;
         }
 
+        // Disable submit button and show loading state to prevent multiple submissions
+        var $submitBtn = $('#btnFormSubmit');
+        var originalBtnHtml = $submitBtn.html();
+        $submitBtn.prop('disabled', true);
+        $submitBtn.html('<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span><span class="text">Uploading...</span>');
+
         var formData = new FormData(this);
 
         $.ajax({
@@ -123,16 +145,25 @@ $(document).ready(function() {
                     });
                     $('#list_label').html('Choose file');
                     $('#list').val('');
+                    // Re-enable button for next upload
+                    $submitBtn.prop('disabled', false);
+                    $submitBtn.html(originalBtnHtml);
                 } else if(data && data.errors){
                     var msg = '';
                     if(typeof data.errors === 'string') msg = data.errors;
                     else if(data.errors.list) msg = data.errors.list;
                     else msg = JSON.stringify(data.errors);
                     Swal.fire({icon:'error',title:'Upload failed',text:msg});
+                    // Re-enable button on error so user can retry
+                    $submitBtn.prop('disabled', false);
+                    $submitBtn.html(originalBtnHtml);
                 }
             },
             error: function(jqXHR, textStatus, errorThrown){
                 Swal.fire({icon:'error',title:'Upload error',text:'An unexpected error occurred.'});
+                // Re-enable button on error so user can retry
+                $submitBtn.prop('disabled', false);
+                $submitBtn.html(originalBtnHtml);
             }
         });
     });

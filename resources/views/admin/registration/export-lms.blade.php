@@ -101,11 +101,11 @@ $(document).ready(function() {
 
     var table = $('#grid').DataTable({
         "dom": 'Bltip',
-        // "lengthMenu": [25, 50, 75, 100],
         "responsive": true,
         "processing": true,
-        "serverSide": true,
-        "paging":false,
+        "serverSide": false,
+        "paging": false,
+        "info": true,
         "deferLoading": 0,
         "ajax": {
                 "url": "/admin/registration/export-to-lms",

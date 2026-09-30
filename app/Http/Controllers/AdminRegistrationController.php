@@ -48,6 +48,17 @@ class AdminRegistrationController extends Controller
             return view('admin.registration.view');
         }
         else{
+            $accYear = trim((string) ($request->accyear ?? ''));
+            if ($accYear !== '' && !preg_match('/^\d{4}$/', $accYear)) {
+                return response()->json([
+                    'draw' => (int) ($request->draw ?? 1),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                    'error' => 'Please enter a valid 4-digit academic year.'
+                ], 422);
+            }
+
             $data = [];
             $col = [0=>'RegistrationNo',1=>'Name',2=>'Batch',3=>'IDNo',4=>'StudyYear',5=>'AcademicYear'];
             //DB::enableQueryLog();
@@ -84,8 +95,19 @@ class AdminRegistrationController extends Controller
                 'student_yearly_registration.registered_year',
                 'student_yearly_registration.academic_year'
             ]);
-            $ac = clone $a;
-            $Count = $ac->count();
+            $countQuery = Student::join('student_yearly_registration','student_personal_details.id','=','student_yearly_registration.student_id')
+                ->join('student_academic_details','student_personal_details.id','=','student_academic_details.student_id')
+                ->join('master_batch','student_academic_details.batch','=','master_batch.id');
+
+            if(!empty($request->studyyear)){
+                $countQuery->where('student_yearly_registration.registered_year','=',$request->studyyear);
+            }
+
+            if(!empty($request->accyear)){
+                $countQuery->where('student_yearly_registration.academic_year','=',$request->accyear);
+            }
+
+            $Count = (int) $countQuery->distinct('student_personal_details.id')->count('student_personal_details.id');
 
             $data['recordsTotal']=    $Count;
             $data['recordsFiltered']= $Count;
@@ -152,8 +174,13 @@ class AdminRegistrationController extends Controller
             $file = $request->file('list');        
             $file_name = str_replace(' ', '-', strtolower($file->getClientOriginalName()));
             
-            // Import from the temporary upload file first
-            Excel::import(new YearRegistrationImport(), $file);
+            // Import the temporary upload before moving it into storage.
+            try {
+                Excel::import(new YearRegistrationImport(), $file);
+            } catch (\Exception $e) {
+                return response()->json(['errors'=>['list'=>'File validation error: ' . $e->getMessage()]]);
+            }
+
             $file->move($path, $file_name);
 
             // ensure import produced rows
@@ -431,6 +458,13 @@ class AdminRegistrationController extends Controller
                         'registration_no AS RegistrationNo',
                         'id_no AS IDNo',
                         DB::raw('CONCAT(initials," ",name_marking) AS Name')
+                    )
+                    ->groupBy(
+                        'student_personal_details.id',
+                        'registration_no',
+                        'id_no',
+                        'initials',
+                        'name_marking'
                     );
 
 

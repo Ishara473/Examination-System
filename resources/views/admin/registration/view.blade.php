@@ -25,7 +25,8 @@ Yearly Registration
             <div class="col-md-2">
                 <div class="form-group">
                     <label for="ACCYear">Academic Year</label>
-                <input type="input" class="form-control yearpicker" id="ACCYear" name="ACCYear" value="{{settings('year')-1}}">
+                    <input type="text" class="form-control yearpicker" id="ACCYear" name="ACCYear" value="" inputmode="numeric" pattern="[0-9]{4}" aria-describedby="ACCYearError">
+                    <div id="ACCYearError" class="invalid-feedback d-block" style="display:none;"></div>
                 </div>
             </div>
             <div class="col-md-2">
@@ -63,8 +64,48 @@ Yearly Registration
 <script>
 $(document).ready(function() {
     
+    function validateAcademicYear() {
+        const academicYear = $('#ACCYear').val().trim();
+        if (!academicYear) {
+            $('#ACCYear').removeClass('is-invalid');
+            $('#ACCYearError').hide().text('');
+            return true;
+        }
+
+        if (!/^\d{4}$/.test(academicYear)) {
+            $('#ACCYear').addClass('is-invalid');
+            $('#ACCYearError').text('Please enter a valid 4-digit academic year.').show();
+            $('#ACCYear').focus();
+            return false;
+        }
+
+        $('#ACCYear').removeClass('is-invalid');
+        $('#ACCYearError').hide().text('');
+        return true;
+    }
+
+    $('#ACCYear').on('input', function(){
+        if ($(this).val().trim() === '') {
+            $(this).removeClass('is-invalid');
+            $('#ACCYearError').hide().text('');
+            return;
+        }
+
+        if (!/^\d{4}$/.test($(this).val().trim())) {
+            $(this).addClass('is-invalid');
+            $('#ACCYearError').text('Please enter a valid 4-digit academic year.').show();
+            return;
+        }
+
+        $(this).removeClass('is-invalid');
+        $('#ACCYearError').hide().text('');
+    });
+
     $('#BtnFilterSubmit').on('click',function(e){
         e.preventDefault();
+        if (!validateAcademicYear()) {
+            return;
+        }
         table.ajax.reload();
         // $('#exportExcel').attr('href','/admin/registration/list?type=excel&startDate='+$('#StartDate').val()+'&endDate='+$('#EndDate').val()+'&search='+$('#Search').val());
     });
@@ -76,7 +117,6 @@ $(document).ready(function() {
 		"responsive": true,
 		"processing": true,
 		"serverSide": true,
-    // "deferLoading": 0,
 		"ajax": {
 				"url": "/admin/registration/view-year-registration",
                 "data" : function ( d ) {
