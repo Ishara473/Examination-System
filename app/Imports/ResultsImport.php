@@ -36,7 +36,7 @@ class ResultsImport implements ToCollection
                     }
                     
                     // Validate grade format
-                    $validGrades = ['A', 'A+', 'A-', 'B', 'B+', 'B-', 'C', 'C+', 'C-', 'D', 'D+', 'E', 'F', 'AB', 'MCA', 'NE'];
+                    $validGrades = ['A', 'A+', 'A-', 'B', 'B+', 'B-', 'C', 'C+', 'C-', 'D', 'D+', 'E', 'F', 'AB', 'MCA', 'NE', 'P'];
                     if(!in_array($result, $validGrades)){
                         Log::notice("Invalid grade {$result} for registration {$registration_no}");
                         continue; // Skip invalid grades
