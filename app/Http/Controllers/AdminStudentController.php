@@ -47,6 +47,7 @@ use App\Imports\ScholarshipImport;
 
 
 use App\Exports\StudentExport;
+use PDF;
 
 
 class AdminStudentController extends Controller{
@@ -960,7 +961,91 @@ class AdminStudentController extends Controller{
 
         return -1;
     }
-        
+
+    /* **********************************************************************************************/
+    /* ************************************* Studentship Letter ************************************/
+    /* **********************************************************************************************/
+
+    public function student_ship_letter(Request $request){
+        if (!(Auth::user()->hasPermissionTo('student:view') || Auth::user()->hasRole('Admin') )){ 
+            abort(403, 'Unauthorized action.');
+        }
+        return view('admin.students.student-ship-letter');
+    }
+
+    public function generate_student_ship_letter(Request $request){
+        if (!(Auth::user()->hasPermissionTo('student:view') || Auth::user()->hasRole('Admin') )){ 
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validator = Validator::make($request->all(), ['registration_no' => 'required']);
+        if($validator->fails()){
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $student = Student::join('student_academic_details','student_personal_details.id','=','student_academic_details.student_id')
+                        ->join('master_batch','student_academic_details.batch','=','master_batch.id')
+                        ->join('master_degree_programs','master_batch.program_id','=','master_degree_programs.id')
+                        ->leftJoin('master_course_specialization_categories','student_academic_details.specialization_id','=','master_course_specialization_categories.id')
+                        ->where('student_personal_details.registration_no','=',$request->registration_no)
+                        ->select(
+                            'student_personal_details.id',
+                            'student_personal_details.full_name',
+                            'student_personal_details.initials',
+                            'student_personal_details.name_marking',
+                            'student_personal_details.gender',
+                            'student_personal_details.registration_no',
+                            'student_academic_details.registration_date',
+                            'student_academic_details.current_study_year',
+                            'master_degree_programs.name as degree_program',
+                            'master_degree_programs.short_name as degree_short_name',
+                            'master_course_specialization_categories.name as specialization'
+                        )
+                        ->first();
+
+        if(empty($student)){
+            return redirect()->back()->with('error', 'Student not found with this registration number.');
+        }
+
+        $genderTitle = ($student->gender == 1) ? 'Mr.' : 'Ms.';
+        $studentName = $genderTitle . ' ' . $student->initials . ' ' . $student->name_marking;
+
+        $degreeName = 'Bachelor of Agriculture';
+        if(!empty($student->specialization) && str_contains(strtolower($student->degree_program), 'honours')){
+            $degreeName = 'Bachelor of Science Honours in Agriculture Degree';
+        }
+
+        $degreeDuration = 'four years';
+        if(str_contains(strtolower($student->degree_short_name), '3') || str_contains(strtolower($student->degree_program), '3')){
+            $degreeDuration = 'three years';
+        }
+
+        $registrationDate = Carbon::parse($student->registration_date);
+        $formattedDate = $registrationDate->format('jS F Y');
+
+        $currentStudyYear = $student->current_study_year;
+        $yearNames = [1 => '1st', 2 => '2nd', 3 => '3rd', 4 => '4th', 5 => '5th'];
+        $currentYearName = isset($yearNames[$currentStudyYear]) ? $yearNames[$currentStudyYear] : $currentStudyYear . 'th';
+
+        $currentDate = Carbon::now()->format('Y.m.d');
+
+        $data = [
+            'student_name' => $studentName,
+            'registration_no' => $student->registration_no,
+            'degree_program' => $degreeName,
+            'registration_date' => $formattedDate,
+            'degree_duration' => $degreeDuration,
+            'current_year' => $currentYearName,
+            'letter_date' => $currentDate,
+        ];
+
+        $pdf = PDF::loadView('admin.students.pdf.student-ship-letter', $data)
+                    ->setPaper('a4', 'portrait');
+
+        $filename = 'StudentshipLetter_' . str_replace('/', '-', $student->registration_no) . '.pdf';
+        return $pdf->download($filename);
+    }
+
 
 
 
