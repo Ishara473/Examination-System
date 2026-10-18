@@ -83,6 +83,9 @@ Route::get('/admin/student/get-document/{id}', [AdminStudentController::class, '
 Route::get('/admin/student/upload-scholarship', [AdminStudentController::class, 'view_upload_scholarships']);
 Route::post('/admin/student/upload-scholarship', [AdminStudentController::class, 'upload_scholarships']);
 
+Route::get('/admin/student/student-ship-letter', [AdminStudentController::class, 'student_ship_letter']);
+Route::post('/admin/student/generate-student-ship-letter', [AdminStudentController::class, 'generate_student_ship_letter']);
+
 Route::get('/admin/settings', [SettingsController::class, 'index']);
 Route::get('/admin/settings/system-settings', [SettingsController::class, 'list_settings']);
 Route::post('/admin/settings/update-system-settings', [SettingsController::class, 'update_setting']);

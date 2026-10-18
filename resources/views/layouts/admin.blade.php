@@ -52,6 +52,7 @@
                         @if(( Auth::user()->hasPermissionTo('student:edit') || Auth::user()->hasRole('Admin')))
                         <a class="collapse-item" href="{{url('/admin/student/upload-scholarship')}}">Update Scholarships</a>
                         @endif
+                        <a class="collapse-item" href="{{url('/admin/student/student-ship-letter')}}">Studentship Letter</a>
                     </div>
                 </div>
             </li>

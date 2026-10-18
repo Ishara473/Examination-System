@@ -51,6 +51,7 @@ Students
             <div class="form-group">
                 <label for="BtnExport" class="d-block">&nbsp;</label>
                 <a href="/admin/student/list?type=excel&batch={{$curBatch}}" class="btn btn-info btn-grey-overlay btn-icon-split" id="exportExcel" ><span class="icon"><i class="fa fa-file-excel"></i></span> <span class="text">Export to Excel</span></a>
+                <a href="/admin/student/student-ship-letter" class="btn btn-success btn-grey-overlay btn-icon-split mt-2" id="studentShipLetter" ><span class="icon"><i class="fa fa-file-text"></i></span> <span class="text">Studentship Letter</span></a>
             </div>
           </div>
         </div>
